@@ -31,6 +31,8 @@ pub fn run(
         vendor_hash: None,
         cargo_hash: None,
         npm_deps_hash: None,
+        maven_hash: None,
+        nuget_deps_hash: None,
         status: Status::Pending,
         verified_at: None,
         hash_aarch64_darwin: None,

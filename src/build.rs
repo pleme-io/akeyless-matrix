@@ -136,8 +136,12 @@ async fn build_entry(
                 }
             }
         }
-        Builder::MkPythonPackage | Builder::None => {
-            // Python packages and source-only packages don't need extra hashes
+        Builder::MkPythonPackage
+        | Builder::MkJavaMavenPackage
+        | Builder::MkDotnetPackage
+        | Builder::MkTerraformModuleCheck
+        | Builder::None => {
+            // Python, Java/Maven, .NET, Terraform, and source-only packages don't need extra hashes
         }
     }
 
@@ -262,6 +266,8 @@ mod tests {
             vendor_hash: Some("sha256-test".into()),
             cargo_hash: None,
             npm_deps_hash: None,
+            maven_hash: None,
+            nuget_deps_hash: None,
             status: Status::Pending,
             verified_at: None,
             hash_aarch64_darwin: None,
@@ -277,6 +283,8 @@ mod tests {
             vendor_hash: None,
             cargo_hash: None,
             npm_deps_hash: None,
+            maven_hash: None,
+            nuget_deps_hash: None,
             status: Status::Pending,
             verified_at: None,
             hash_aarch64_darwin: None,
@@ -320,6 +328,8 @@ mod tests {
             vendor_hash: None,
             cargo_hash: None,
             npm_deps_hash: None,
+            maven_hash: None,
+            nuget_deps_hash: None,
             status: Status::Pending,
             verified_at: None,
             hash_aarch64_darwin: None,
@@ -363,6 +373,8 @@ mod tests {
             vendor_hash: None,
             cargo_hash: None,
             npm_deps_hash: None,
+            maven_hash: None,
+            nuget_deps_hash: None,
             status: Status::Pending,
             verified_at: None,
             hash_aarch64_darwin: None,
@@ -419,6 +431,8 @@ mod tests {
                 vendor_hash: None,
                 cargo_hash: None,
                 npm_deps_hash: None,
+                maven_hash: None,
+                nuget_deps_hash: None,
                 status: Status::Pending,
                 verified_at: None,
                 hash_aarch64_darwin: None,
@@ -515,6 +529,8 @@ mod tests {
                 vendor_hash: None,
                 cargo_hash: None,
                 npm_deps_hash: None,
+                maven_hash: None,
+                nuget_deps_hash: None,
                 status: Status::Pending,
                 verified_at: None,
                 hash_aarch64_darwin: None,

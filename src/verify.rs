@@ -30,7 +30,14 @@ pub async fn run(
         let pkg = matrix.packages.get(pkg_name).unwrap().clone();
 
         // Only verify packages with a source-built builder
-        if pkg.builder == Builder::None || pkg.builder == Builder::Fetchurl {
+        if matches!(
+            pkg.builder,
+            Builder::None
+                | Builder::Fetchurl
+                | Builder::MkJavaMavenPackage
+                | Builder::MkDotnetPackage
+                | Builder::MkTerraformModuleCheck
+        ) {
             skipped += 1;
             continue;
         }
@@ -106,7 +113,9 @@ async fn verify_entry(
             nixexpr::typescript_expr(pkg, &entry.rev, source_hash, npm_hash, true)
         }
         Language::Python => nixexpr::python_expr(pkg, &entry.rev, source_hash, true),
-        Language::Java => return Ok(()), // source-only, nothing to build
+        Language::Java | Language::Ruby | Language::Php | Language::Csharp | Language::Helm => {
+            return Ok(()); // source-only or externally built, nothing to verify
+        }
     };
 
     let (success, _stdout, stderr) = hash::nix_build_expr(runner, &expr).await?;

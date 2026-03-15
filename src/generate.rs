@@ -76,8 +76,48 @@ pub fn run(
     writer.write_file(&bin_path, &bin_content)?;
     display::print_generate_file(&bin_path.display().to_string());
 
+    // builds/java/default.nix
+    let java_dir = base_dir.join("builds").join("java");
+    writer.create_dir_all(&java_dir)?;
+    let java_path = java_dir.join("default.nix");
+    let java_content = nix::generate_java_builds(&matrix);
+    writer.write_file(&java_path, &java_content)?;
+    display::print_generate_file(&java_path.display().to_string());
+
+    // builds/csharp/default.nix
+    let csharp_dir = base_dir.join("builds").join("csharp");
+    writer.create_dir_all(&csharp_dir)?;
+    let csharp_path = csharp_dir.join("default.nix");
+    let csharp_content = nix::generate_csharp_builds(&matrix);
+    writer.write_file(&csharp_path, &csharp_content)?;
+    display::print_generate_file(&csharp_path.display().to_string());
+
+    // builds/ruby/default.nix
+    let ruby_dir = base_dir.join("builds").join("ruby");
+    writer.create_dir_all(&ruby_dir)?;
+    let ruby_path = ruby_dir.join("default.nix");
+    let ruby_content = nix::generate_ruby_builds(&matrix);
+    writer.write_file(&ruby_path, &ruby_content)?;
+    display::print_generate_file(&ruby_path.display().to_string());
+
+    // builds/php/default.nix
+    let php_dir = base_dir.join("builds").join("php");
+    writer.create_dir_all(&php_dir)?;
+    let php_path = php_dir.join("default.nix");
+    let php_content = nix::generate_php_builds(&matrix);
+    writer.write_file(&php_path, &php_content)?;
+    display::print_generate_file(&php_path.display().to_string());
+
+    // builds/helm/default.nix
+    let helm_dir = base_dir.join("builds").join("helm");
+    writer.create_dir_all(&helm_dir)?;
+    let helm_path = helm_dir.join("default.nix");
+    let helm_content = nix::generate_helm_builds(&matrix);
+    writer.write_file(&helm_path, &helm_content)?;
+    display::print_generate_file(&helm_path.display().to_string());
+
     println!();
-    println!("  done: 7 files generated");
+    println!("  done: 12 files generated");
 
     Ok(())
 }
@@ -132,7 +172,7 @@ mod tests {
     }
 
     #[test]
-    fn test_generate_writes_seven_files() {
+    fn test_generate_writes_twelve_files() {
         let matrix = Matrix {
             packages: BTreeMap::new(),
         };
@@ -142,7 +182,7 @@ mod tests {
         run(Path::new("/fake/matrix.toml"), None, &store, &writer).unwrap();
 
         let files = writer.files.lock().unwrap();
-        assert_eq!(files.len(), 7);
+        assert_eq!(files.len(), 12);
 
         let paths: Vec<String> = files.iter().map(|(p, _)| p.display().to_string()).collect();
         assert!(paths.iter().any(|p| p.ends_with("lib/sources.nix")));
@@ -158,10 +198,25 @@ mod tests {
         assert!(paths
             .iter()
             .any(|p| p.ends_with("builds/binary/default.nix")));
+        assert!(paths
+            .iter()
+            .any(|p| p.ends_with("builds/java/default.nix")));
+        assert!(paths
+            .iter()
+            .any(|p| p.ends_with("builds/csharp/default.nix")));
+        assert!(paths
+            .iter()
+            .any(|p| p.ends_with("builds/ruby/default.nix")));
+        assert!(paths
+            .iter()
+            .any(|p| p.ends_with("builds/php/default.nix")));
+        assert!(paths
+            .iter()
+            .any(|p| p.ends_with("builds/helm/default.nix")));
     }
 
     #[test]
-    fn test_generate_creates_six_dirs() {
+    fn test_generate_creates_eleven_dirs() {
         let matrix = Matrix {
             packages: BTreeMap::new(),
         };
@@ -171,8 +226,9 @@ mod tests {
         run(Path::new("/fake/matrix.toml"), None, &store, &writer).unwrap();
 
         let dirs = writer.dirs.lock().unwrap();
-        // lib/, builds/go/, builds/rust/, builds/python/, builds/typescript/, builds/binary/
-        assert_eq!(dirs.len(), 6);
+        // lib/, builds/go/, builds/rust/, builds/python/, builds/typescript/,
+        // builds/binary/, builds/java/, builds/csharp/, builds/ruby/, builds/php/, builds/helm/
+        assert_eq!(dirs.len(), 11);
     }
 
     #[test]

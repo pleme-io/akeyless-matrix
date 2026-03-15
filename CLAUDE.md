@@ -29,8 +29,8 @@ src/
 ├── nixexpr.rs       # Shared Nix expression templates (used by build + verify)
 ├── build.rs         # Build pending entries: prefetch → hash extract → mark verified/broken
 ├── verify.rs        # Verify ALL entries by rebuilding with stored hashes
-├── generate.rs      # Orchestrate writing 6 Nix files from matrix
-├── nix.rs           # Nix code generators (sources, go/rust/python/ts builds, metadata)
+├── generate.rs      # Orchestrate writing 12 Nix files from matrix
+├── nix.rs           # Nix code generators (sources, go/rust/python/ts/java/csharp/ruby/php/helm builds, metadata)
 ├── certification.rs # SHA-256 fingerprinting, delta tracking, audit log
 ├── add.rs           # Add pending version entry
 ├── status.rs        # Print status table
@@ -66,7 +66,7 @@ All I/O boundaries use traits for testability:
 
 ## Testing
 
-46 tests across 9 modules. Run: `cargo test`
+54 tests across 9 modules. Run: `cargo test`
 
 Key test patterns:
 - `MockRunner` for process execution

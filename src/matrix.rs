@@ -40,6 +40,10 @@ pub enum Language {
     #[serde(rename = "typescript")]
     TypeScript,
     Java,
+    Ruby,
+    Php,
+    Csharp,
+    Helm,
 }
 
 impl fmt::Display for Language {
@@ -50,6 +54,10 @@ impl fmt::Display for Language {
             Self::Python => write!(f, "python"),
             Self::TypeScript => write!(f, "typescript"),
             Self::Java => write!(f, "java"),
+            Self::Ruby => write!(f, "ruby"),
+            Self::Php => write!(f, "php"),
+            Self::Csharp => write!(f, "csharp"),
+            Self::Helm => write!(f, "helm"),
         }
     }
 }
@@ -68,6 +76,12 @@ pub enum Builder {
     BuildNpmPackage,
     #[serde(rename = "fetchurl")]
     Fetchurl,
+    #[serde(rename = "mkJavaMavenPackage")]
+    MkJavaMavenPackage,
+    #[serde(rename = "mkDotnetPackage")]
+    MkDotnetPackage,
+    #[serde(rename = "mkTerraformModuleCheck")]
+    MkTerraformModuleCheck,
     #[serde(rename = "none")]
     None,
 }
@@ -81,6 +95,9 @@ impl fmt::Display for Builder {
             Self::MkPythonPackage => write!(f, "mkPythonPackage"),
             Self::BuildNpmPackage => write!(f, "buildNpmPackage"),
             Self::Fetchurl => write!(f, "fetchurl"),
+            Self::MkJavaMavenPackage => write!(f, "mkJavaMavenPackage"),
+            Self::MkDotnetPackage => write!(f, "mkDotnetPackage"),
+            Self::MkTerraformModuleCheck => write!(f, "mkTerraformModuleCheck"),
             Self::None => write!(f, "none"),
         }
     }
@@ -97,6 +114,12 @@ pub struct VersionEntry {
     pub vendor_hash: Option<String>,
     pub cargo_hash: Option<String>,
     pub npm_deps_hash: Option<String>,
+    /// Maven repository hash for Java/Maven packages
+    #[serde(default)]
+    pub maven_hash: Option<String>,
+    /// .NET NuGet dependencies hash for C#/.NET packages
+    #[serde(default)]
+    pub nuget_deps_hash: Option<String>,
     pub status: Status,
     pub verified_at: Option<DateTime<Utc>>,
     /// Per-platform hashes for fetchurl packages
@@ -286,6 +309,12 @@ impl Matrix {
                 if let Some(ref h) = ver.npm_deps_hash {
                     ver_table["npm_deps_hash"] = toml_edit::value(h.as_str());
                 }
+                if let Some(ref h) = ver.maven_hash {
+                    ver_table["maven_hash"] = toml_edit::value(h.as_str());
+                }
+                if let Some(ref h) = ver.nuget_deps_hash {
+                    ver_table["nuget_deps_hash"] = toml_edit::value(h.as_str());
+                }
                 if let Some(ref h) = ver.hash_aarch64_darwin {
                     ver_table["hash_aarch64_darwin"] = toml_edit::value(h.as_str());
                 }
@@ -440,6 +469,8 @@ status = "verified"
                 vendor_hash: None,
                 cargo_hash: None,
                 npm_deps_hash: None,
+                maven_hash: None,
+                nuget_deps_hash: None,
                 status: Status::Verified,
                 verified_at: None,
                 hash_aarch64_darwin: None,
@@ -456,6 +487,8 @@ status = "verified"
                 vendor_hash: None,
                 cargo_hash: None,
                 npm_deps_hash: None,
+                maven_hash: None,
+                nuget_deps_hash: None,
                 status: Status::Pending,
                 verified_at: None,
                 hash_aarch64_darwin: None,
@@ -472,6 +505,8 @@ status = "verified"
                 vendor_hash: None,
                 cargo_hash: None,
                 npm_deps_hash: None,
+                maven_hash: None,
+                nuget_deps_hash: None,
                 status: Status::Verified,
                 verified_at: None,
                 hash_aarch64_darwin: None,
@@ -530,6 +565,8 @@ status = "verified"
                 vendor_hash: None,
                 cargo_hash: None,
                 npm_deps_hash: None,
+                maven_hash: None,
+                nuget_deps_hash: None,
                 status: Status::Verified,
                 verified_at: None,
                 hash_aarch64_darwin: None,
@@ -546,6 +583,8 @@ status = "verified"
                 vendor_hash: None,
                 cargo_hash: None,
                 npm_deps_hash: None,
+                maven_hash: None,
+                nuget_deps_hash: None,
                 status: Status::Pending,
                 verified_at: None,
                 hash_aarch64_darwin: None,
@@ -562,6 +601,8 @@ status = "verified"
                 vendor_hash: None,
                 cargo_hash: None,
                 npm_deps_hash: None,
+                maven_hash: None,
+                nuget_deps_hash: None,
                 status: Status::Verified,
                 verified_at: None,
                 hash_aarch64_darwin: None,
@@ -646,6 +687,8 @@ pub mod test_helpers {
             vendor_hash: None,
             cargo_hash: None,
             npm_deps_hash: None,
+            maven_hash: None,
+            nuget_deps_hash: None,
             status: Status::Pending,
             verified_at: None,
             hash_aarch64_darwin: None,
@@ -664,6 +707,8 @@ pub mod test_helpers {
             vendor_hash: vendor.map(|s| s.into()),
             cargo_hash: None,
             npm_deps_hash: None,
+            maven_hash: None,
+            nuget_deps_hash: None,
             status: Status::Verified,
             verified_at: None,
             hash_aarch64_darwin: None,

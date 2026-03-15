@@ -356,6 +356,8 @@ mod tests {
                     },
                     cargo_hash: None,
                     npm_deps_hash: None,
+                    maven_hash: None,
+                    nuget_deps_hash: None,
                     status,
                     verified_at: None,
                     hash_aarch64_darwin: None,
