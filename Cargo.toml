@@ -1,0 +1,39 @@
+[package]
+name = "akeyless-matrix"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.89.0"
+description = "Version matrix manager for Akeyless Nix packages"
+license = "MIT"
+authors = ["Pleme Team <team@pleme.io>"]
+repository = "https://github.com/pleme-io/akeyless-matrix"
+homepage = "https://github.com/pleme-io/akeyless-matrix"
+keywords = ["akeyless", "nix", "version-management"]
+categories = ["development-tools", "command-line-utilities"]
+exclude = ["module/", "target/", "result-*", "Cargo.nix", "flake.nix", "flake.lock"]
+
+[[bin]]
+name = "akeyless-matrix"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4.5", features = ["derive"] }
+serde = { version = "1.0", features = ["derive"] }
+toml = "0.8"
+toml_edit = "0.22"
+anyhow = "1.0"
+thiserror = "2.0"
+chrono = { version = "0.4", features = ["serde"] }
+colored = "2.1"
+tokio = { version = "1.40", features = ["full"] }
+regex = "1"
+async-trait = "0.1"
+
+[lints.clippy]
+pedantic = "warn"
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+strip = true
