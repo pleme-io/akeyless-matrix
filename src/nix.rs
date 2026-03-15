@@ -481,7 +481,9 @@ pub fn generate_binary_builds(matrix: &Matrix) -> String {
 
             if let Some(ref urls) = pkg.platform_urls {
                 for (plat, hash_opt) in &platform_hashes {
-                    if let (Some(url), Some(hash)) = (urls.get(*plat), hash_opt) {
+                    if let (Some(url_template), Some(hash)) = (urls.get(*plat), hash_opt) {
+                        // Substitute {version} placeholder with actual version
+                        let url = url_template.replace("{version}", ver);
                         let _ = writeln!(
                             platforms,
                             "      \"{plat}\" = {{ url = \"{url}\"; hash = \"{hash}\"; }};"

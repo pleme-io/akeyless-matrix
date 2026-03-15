@@ -46,7 +46,7 @@ pub async fn run(
         for (ver_key, mut entry) in pending_versions {
             display::print_build_start(pkg_name, &ver_key);
 
-            match build_entry(&pkg, &mut entry, runner).await {
+            match build_entry(&pkg, &ver_key, &mut entry, runner).await {
                 Ok(()) => {
                     entry.status = Status::Verified;
                     entry.verified_at = Some(Utc::now());
@@ -82,6 +82,7 @@ pub async fn run(
 /// Build a single version entry: prefetch source, then extract vendor/cargo/npm hash.
 async fn build_entry(
     pkg: &Package,
+    version: &str,
     entry: &mut VersionEntry,
     runner: &dyn CommandRunner,
 ) -> Result<()> {
@@ -119,10 +120,12 @@ async fn build_entry(
         }
         Builder::Fetchurl => {
             // For binary packages, prefetch all platform URLs
+            // Substitute {version} placeholder with actual version
             if let Some(ref urls) = pkg.platform_urls {
                 display::print_hash_extraction("binary (all platforms)");
-                for (platform, url) in urls {
-                    let hash_result = hash::prefetch_url(runner, url).await?;
+                for (platform, url_template) in urls {
+                    let url = url_template.replace("{version}", version);
+                    let hash_result = hash::prefetch_url(runner, &url).await?;
                     match platform.as_str() {
                         "aarch64-darwin" => entry.hash_aarch64_darwin = Some(hash_result),
                         "x86_64-darwin" => entry.hash_x86_64_darwin = Some(hash_result),
