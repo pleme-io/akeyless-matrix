@@ -85,8 +85,8 @@ async fn build_entry(
     entry: &mut VersionEntry,
     runner: &dyn CommandRunner,
 ) -> Result<()> {
-    // Step 1: Prefetch source hash if missing
-    if entry.source_hash.is_none() {
+    // Step 1: Prefetch source hash if missing (skip for fetchurl packages)
+    if entry.source_hash.is_none() && pkg.builder != Builder::Fetchurl {
         display::print_prefetch_start(&pkg.owner, &pkg.repo, &entry.rev);
         let source_hash =
             hash::prefetch_github(runner, &pkg.owner, &pkg.repo, &entry.rev).await?;
@@ -115,6 +115,22 @@ async fn build_entry(
                 display::print_hash_extraction("npm deps");
                 let npm_hash = extract_npm_deps_hash(pkg, entry, runner).await?;
                 entry.npm_deps_hash = Some(npm_hash);
+            }
+        }
+        Builder::Fetchurl => {
+            // For binary packages, prefetch all platform URLs
+            if let Some(ref urls) = pkg.platform_urls {
+                display::print_hash_extraction("binary (all platforms)");
+                for (platform, url) in urls {
+                    let hash_result = hash::prefetch_url(runner, url).await?;
+                    match platform.as_str() {
+                        "aarch64-darwin" => entry.hash_aarch64_darwin = Some(hash_result),
+                        "x86_64-darwin" => entry.hash_x86_64_darwin = Some(hash_result),
+                        "x86_64-linux" => entry.hash_x86_64_linux = Some(hash_result),
+                        "aarch64-linux" => entry.hash_aarch64_linux = Some(hash_result),
+                        _ => {}
+                    }
+                }
             }
         }
         Builder::MkPythonPackage | Builder::None => {
@@ -230,6 +246,8 @@ mod tests {
             pname_override: None,
             dont_npm_build: None,
             extra_post_install: None,
+            binary_name: None,
+            platform_urls: None,
             track: crate::matrix::TrackMode::default(),
             unstable_base: None,
             versions: BTreeMap::new(),
@@ -243,6 +261,10 @@ mod tests {
             npm_deps_hash: None,
             status: Status::Pending,
             verified_at: None,
+            hash_aarch64_darwin: None,
+            hash_x86_64_darwin: None,
+            hash_x86_64_linux: None,
+            hash_aarch64_linux: None,
         };
         assert!(!needs_vendor_hash(&pkg, &entry_with_hash));
 
@@ -254,6 +276,10 @@ mod tests {
             npm_deps_hash: None,
             status: Status::Pending,
             verified_at: None,
+            hash_aarch64_darwin: None,
+            hash_x86_64_darwin: None,
+            hash_x86_64_linux: None,
+            hash_aarch64_linux: None,
         };
         assert!(needs_vendor_hash(&pkg, &entry_no_hash));
     }
@@ -279,6 +305,8 @@ mod tests {
             pname_override: None,
             dont_npm_build: None,
             extra_post_install: None,
+            binary_name: None,
+            platform_urls: None,
             track: crate::matrix::TrackMode::default(),
             unstable_base: None,
             versions: BTreeMap::new(),
@@ -291,6 +319,10 @@ mod tests {
             npm_deps_hash: None,
             status: Status::Pending,
             verified_at: None,
+            hash_aarch64_darwin: None,
+            hash_x86_64_darwin: None,
+            hash_x86_64_linux: None,
+            hash_aarch64_linux: None,
         };
         assert!(!needs_vendor_hash(&pkg, &entry));
     }
@@ -316,6 +348,8 @@ mod tests {
             pname_override: None,
             dont_npm_build: None,
             extra_post_install: None,
+            binary_name: None,
+            platform_urls: None,
             track: crate::matrix::TrackMode::default(),
             unstable_base: None,
             versions: BTreeMap::new(),
@@ -328,6 +362,10 @@ mod tests {
             npm_deps_hash: None,
             status: Status::Pending,
             verified_at: None,
+            hash_aarch64_darwin: None,
+            hash_x86_64_darwin: None,
+            hash_x86_64_linux: None,
+            hash_aarch64_linux: None,
         };
         assert!(needs_vendor_hash(&pkg, &entry));
     }
@@ -380,6 +418,10 @@ mod tests {
                 npm_deps_hash: None,
                 status: Status::Pending,
                 verified_at: None,
+                hash_aarch64_darwin: None,
+                hash_x86_64_darwin: None,
+                hash_x86_64_linux: None,
+                hash_aarch64_linux: None,
             },
         );
         let mut packages = BTreeMap::new();
@@ -403,6 +445,8 @@ mod tests {
                 pname_override: None,
                 dont_npm_build: None,
                 extra_post_install: None,
+                binary_name: None,
+                platform_urls: None,
                 track: crate::matrix::TrackMode::default(),
                 unstable_base: None,
                 versions,
@@ -470,6 +514,10 @@ mod tests {
                 npm_deps_hash: None,
                 status: Status::Pending,
                 verified_at: None,
+                hash_aarch64_darwin: None,
+                hash_x86_64_darwin: None,
+                hash_x86_64_linux: None,
+                hash_aarch64_linux: None,
             },
         );
         let mut packages = BTreeMap::new();
@@ -493,6 +541,8 @@ mod tests {
                 pname_override: None,
                 dont_npm_build: None,
                 extra_post_install: None,
+                binary_name: None,
+                platform_urls: None,
                 track: crate::matrix::TrackMode::default(),
                 unstable_base: None,
                 versions,

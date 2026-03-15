@@ -68,8 +68,16 @@ pub fn run(
     writer.write_file(&ts_path, &ts_content)?;
     display::print_generate_file(&ts_path.display().to_string());
 
+    // builds/binary/default.nix
+    let bin_dir = base_dir.join("builds").join("binary");
+    writer.create_dir_all(&bin_dir)?;
+    let bin_path = bin_dir.join("default.nix");
+    let bin_content = nix::generate_binary_builds(&matrix);
+    writer.write_file(&bin_path, &bin_content)?;
+    display::print_generate_file(&bin_path.display().to_string());
+
     println!();
-    println!("  done: 6 files generated");
+    println!("  done: 7 files generated");
 
     Ok(())
 }
@@ -124,7 +132,7 @@ mod tests {
     }
 
     #[test]
-    fn test_generate_writes_six_files() {
+    fn test_generate_writes_seven_files() {
         let matrix = Matrix {
             packages: BTreeMap::new(),
         };
@@ -134,7 +142,7 @@ mod tests {
         run(Path::new("/fake/matrix.toml"), None, &store, &writer).unwrap();
 
         let files = writer.files.lock().unwrap();
-        assert_eq!(files.len(), 6);
+        assert_eq!(files.len(), 7);
 
         let paths: Vec<String> = files.iter().map(|(p, _)| p.display().to_string()).collect();
         assert!(paths.iter().any(|p| p.ends_with("lib/sources.nix")));
@@ -147,10 +155,13 @@ mod tests {
         assert!(paths
             .iter()
             .any(|p| p.ends_with("builds/typescript/default.nix")));
+        assert!(paths
+            .iter()
+            .any(|p| p.ends_with("builds/binary/default.nix")));
     }
 
     #[test]
-    fn test_generate_creates_four_dirs() {
+    fn test_generate_creates_six_dirs() {
         let matrix = Matrix {
             packages: BTreeMap::new(),
         };
@@ -160,8 +171,8 @@ mod tests {
         run(Path::new("/fake/matrix.toml"), None, &store, &writer).unwrap();
 
         let dirs = writer.dirs.lock().unwrap();
-        // lib/, builds/go/, builds/rust/, builds/python/, builds/typescript/
-        assert_eq!(dirs.len(), 5);
+        // lib/, builds/go/, builds/rust/, builds/python/, builds/typescript/, builds/binary/
+        assert_eq!(dirs.len(), 6);
     }
 
     #[test]

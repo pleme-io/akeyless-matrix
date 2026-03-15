@@ -29,8 +29,8 @@ pub async fn run(
     for pkg_name in &pkg_names {
         let pkg = matrix.packages.get(pkg_name).unwrap().clone();
 
-        // Only verify packages with a real builder
-        if pkg.builder == Builder::None {
+        // Only verify packages with a source-built builder
+        if pkg.builder == Builder::None || pkg.builder == Builder::Fetchurl {
             skipped += 1;
             continue;
         }

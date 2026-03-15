@@ -192,6 +192,8 @@ mod tests {
             pname_override: None,
             dont_npm_build: None,
             extra_post_install: None,
+            binary_name: None,
+            platform_urls: None,
             track: crate::matrix::TrackMode::default(),
             unstable_base: None,
             versions: BTreeMap::new(),

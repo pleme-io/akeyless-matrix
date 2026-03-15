@@ -358,6 +358,10 @@ mod tests {
                     npm_deps_hash: None,
                     status,
                     verified_at: None,
+                    hash_aarch64_darwin: None,
+                    hash_x86_64_darwin: None,
+                    hash_x86_64_linux: None,
+                    hash_aarch64_linux: None,
                 },
             );
         }
@@ -379,6 +383,8 @@ mod tests {
             pname_override: None,
             dont_npm_build: None,
             extra_post_install: None,
+            binary_name: None,
+            platform_urls: None,
             track: crate::matrix::TrackMode::default(),
             unstable_base: None,
             versions: vers,

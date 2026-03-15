@@ -33,6 +33,10 @@ pub fn run(
         npm_deps_hash: None,
         status: Status::Pending,
         verified_at: None,
+        hash_aarch64_darwin: None,
+        hash_x86_64_darwin: None,
+        hash_x86_64_linux: None,
+        hash_aarch64_linux: None,
     };
 
     pkg.versions.insert(version.to_string(), entry);

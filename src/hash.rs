@@ -46,6 +46,31 @@ pub fn extract_hash_from_stderr(stderr: &str) -> Option<String> {
         .map(|m| m.as_str().to_string())
 }
 
+/// Prefetch a URL and return its SRI hash.
+pub async fn prefetch_url(runner: &dyn CommandRunner, url: &str) -> Result<String> {
+    let output = runner
+        .run("nix-prefetch-url", &[url, "--type", "sha256"])
+        .await
+        .context("running nix-prefetch-url")?;
+
+    if !output.success {
+        bail!("nix-prefetch-url failed for {url}: {}", output.stderr);
+    }
+
+    // nix-prefetch-url outputs the hash on stdout, convert to SRI
+    let nix32_hash = output.stdout.trim().to_string();
+    let sri_output = runner
+        .run("nix", &["hash", "to-sri", "--type", "sha256", &nix32_hash])
+        .await
+        .context("converting hash to SRI")?;
+
+    if !sri_output.success {
+        bail!("nix hash to-sri failed: {}", sri_output.stderr);
+    }
+
+    Ok(sri_output.stdout.trim().to_string())
+}
+
 /// Run a Nix build expression and return (success, stdout, stderr).
 pub async fn nix_build_expr(
     runner: &dyn CommandRunner,

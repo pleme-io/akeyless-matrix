@@ -66,6 +66,8 @@ pub enum Builder {
     MkPythonPackage,
     #[serde(rename = "buildNpmPackage")]
     BuildNpmPackage,
+    #[serde(rename = "fetchurl")]
+    Fetchurl,
     #[serde(rename = "none")]
     None,
 }
@@ -78,6 +80,7 @@ impl fmt::Display for Builder {
             Self::BuildRustPackage => write!(f, "buildRustPackage"),
             Self::MkPythonPackage => write!(f, "mkPythonPackage"),
             Self::BuildNpmPackage => write!(f, "buildNpmPackage"),
+            Self::Fetchurl => write!(f, "fetchurl"),
             Self::None => write!(f, "none"),
         }
     }
@@ -96,6 +99,15 @@ pub struct VersionEntry {
     pub npm_deps_hash: Option<String>,
     pub status: Status,
     pub verified_at: Option<DateTime<Utc>>,
+    /// Per-platform hashes for fetchurl packages
+    #[serde(default)]
+    pub hash_aarch64_darwin: Option<String>,
+    #[serde(default)]
+    pub hash_x86_64_darwin: Option<String>,
+    #[serde(default)]
+    pub hash_x86_64_linux: Option<String>,
+    #[serde(default)]
+    pub hash_aarch64_linux: Option<String>,
 }
 
 /// How the watch daemon detects new versions for this package.
@@ -107,6 +119,8 @@ pub enum TrackMode {
     Tags,
     /// Track HEAD commits. Version = "{unstable_base}-unstable.{date}".
     Commits,
+    /// Track binary URL hash changes (closed-source prebuilt binaries).
+    Binary,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -145,6 +159,12 @@ pub struct Package {
     pub dont_npm_build: Option<bool>,
     #[serde(default)]
     pub extra_post_install: Option<String>,
+    /// Binary name for fetchurl packages (e.g., "akeyless")
+    #[serde(default)]
+    pub binary_name: Option<String>,
+    /// Per-platform download URLs for fetchurl packages
+    #[serde(default)]
+    pub platform_urls: Option<BTreeMap<String, String>>,
     #[serde(default)]
     pub versions: BTreeMap<String, VersionEntry>,
 }
@@ -217,9 +237,23 @@ impl Matrix {
             set_optional_string(pkg_table, "extra_post_install", &pkg.extra_post_install);
             set_optional_bool(pkg_table, "proxy_vendor", pkg.proxy_vendor);
             set_optional_bool(pkg_table, "dont_npm_build", pkg.dont_npm_build);
+            set_optional_string(pkg_table, "binary_name", &pkg.binary_name);
             set_optional_vec(pkg_table, "sub_packages", &pkg.sub_packages);
             set_optional_vec(pkg_table, "native_build_inputs", &pkg.native_build_inputs);
             set_optional_vec(pkg_table, "python_deps", &pkg.python_deps);
+
+            // platform_urls sub-table
+            if let Some(ref urls) = pkg.platform_urls {
+                if pkg_table.get("platform_urls").is_none() {
+                    pkg_table["platform_urls"] = toml_edit::Item::Table(toml_edit::Table::new());
+                }
+                let urls_table = pkg_table["platform_urls"]
+                    .as_table_mut()
+                    .unwrap();
+                for (platform, url) in urls {
+                    urls_table[platform.as_str()] = toml_edit::value(url.as_str());
+                }
+            }
 
             // Versions sub-table
             if pkg_table.get("versions").is_none() {
@@ -251,6 +285,18 @@ impl Matrix {
                 }
                 if let Some(ref h) = ver.npm_deps_hash {
                     ver_table["npm_deps_hash"] = toml_edit::value(h.as_str());
+                }
+                if let Some(ref h) = ver.hash_aarch64_darwin {
+                    ver_table["hash_aarch64_darwin"] = toml_edit::value(h.as_str());
+                }
+                if let Some(ref h) = ver.hash_x86_64_darwin {
+                    ver_table["hash_x86_64_darwin"] = toml_edit::value(h.as_str());
+                }
+                if let Some(ref h) = ver.hash_x86_64_linux {
+                    ver_table["hash_x86_64_linux"] = toml_edit::value(h.as_str());
+                }
+                if let Some(ref h) = ver.hash_aarch64_linux {
+                    ver_table["hash_aarch64_linux"] = toml_edit::value(h.as_str());
                 }
                 if let Some(ts) = ver.verified_at {
                     ver_table["verified_at"] = toml_edit::value(ts.to_rfc3339());
@@ -396,6 +442,10 @@ status = "verified"
                 npm_deps_hash: None,
                 status: Status::Verified,
                 verified_at: None,
+                hash_aarch64_darwin: None,
+                hash_x86_64_darwin: None,
+                hash_x86_64_linux: None,
+                hash_aarch64_linux: None,
             },
         );
         versions.insert(
@@ -408,6 +458,10 @@ status = "verified"
                 npm_deps_hash: None,
                 status: Status::Pending,
                 verified_at: None,
+                hash_aarch64_darwin: None,
+                hash_x86_64_darwin: None,
+                hash_x86_64_linux: None,
+                hash_aarch64_linux: None,
             },
         );
         versions.insert(
@@ -420,6 +474,10 @@ status = "verified"
                 npm_deps_hash: None,
                 status: Status::Verified,
                 verified_at: None,
+                hash_aarch64_darwin: None,
+                hash_x86_64_darwin: None,
+                hash_x86_64_linux: None,
+                hash_aarch64_linux: None,
             },
         );
 
@@ -441,6 +499,8 @@ status = "verified"
             pname_override: None,
             dont_npm_build: None,
             extra_post_install: None,
+            binary_name: None,
+            platform_urls: None,
             track: TrackMode::default(),
             unstable_base: None,
             versions,
@@ -472,6 +532,10 @@ status = "verified"
                 npm_deps_hash: None,
                 status: Status::Verified,
                 verified_at: None,
+                hash_aarch64_darwin: None,
+                hash_x86_64_darwin: None,
+                hash_x86_64_linux: None,
+                hash_aarch64_linux: None,
             },
         );
         versions.insert(
@@ -484,6 +548,10 @@ status = "verified"
                 npm_deps_hash: None,
                 status: Status::Pending,
                 verified_at: None,
+                hash_aarch64_darwin: None,
+                hash_x86_64_darwin: None,
+                hash_x86_64_linux: None,
+                hash_aarch64_linux: None,
             },
         );
         versions.insert(
@@ -496,6 +564,10 @@ status = "verified"
                 npm_deps_hash: None,
                 status: Status::Verified,
                 verified_at: None,
+                hash_aarch64_darwin: None,
+                hash_x86_64_darwin: None,
+                hash_x86_64_linux: None,
+                hash_aarch64_linux: None,
             },
         );
 
@@ -517,6 +589,8 @@ status = "verified"
             pname_override: None,
             dont_npm_build: None,
             extra_post_install: None,
+            binary_name: None,
+            platform_urls: None,
             track: TrackMode::default(),
             unstable_base: None,
             versions,
@@ -557,6 +631,8 @@ pub mod test_helpers {
             pname_override: None,
             dont_npm_build: None,
             extra_post_install: None,
+            binary_name: None,
+            platform_urls: None,
             versions: BTreeMap::new(),
         }
     }
@@ -572,6 +648,10 @@ pub mod test_helpers {
             npm_deps_hash: None,
             status: Status::Pending,
             verified_at: None,
+            hash_aarch64_darwin: None,
+            hash_x86_64_darwin: None,
+            hash_x86_64_linux: None,
+            hash_aarch64_linux: None,
         }
     }
 
@@ -586,6 +666,10 @@ pub mod test_helpers {
             npm_deps_hash: None,
             status: Status::Verified,
             verified_at: None,
+            hash_aarch64_darwin: None,
+            hash_x86_64_darwin: None,
+            hash_x86_64_linux: None,
+            hash_aarch64_linux: None,
         }
     }
 }
