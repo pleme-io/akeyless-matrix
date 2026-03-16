@@ -2,6 +2,7 @@ use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
 mod add;
+mod audit;
 mod build;
 mod certification;
 mod display;
@@ -99,17 +100,44 @@ async fn main() -> anyhow::Result<()> {
         }
         Commands::Verify => verify::run(&matrix_path, &runner, &store).await?,
         Commands::Certify { package } => {
+            let audit_log = audit::AuditLog::default_path();
+
             // Snapshot the matrix before building (for delta computation)
             let prev_matrix = store.load(&matrix_path)?;
 
+            let certify_start = std::time::Instant::now();
             build::run(&matrix_path, package.as_deref(), &runner, &store).await?;
+
+            let gen_start = std::time::Instant::now();
             generate::run(&matrix_path, None, &store, &writer)?;
+            let gen_duration = gen_start.elapsed().as_millis() as u64;
 
             // Record certification with fingerprint and delta
             let current_matrix = store.load(&matrix_path)?;
             let matrix_dir = matrix_path.parent().unwrap_or(std::path::Path::new("."));
             let cert = certification::record(matrix_dir, &prev_matrix, &current_matrix)?;
             display::print_certification(&cert);
+
+            let total_duration = certify_start.elapsed().as_millis() as u64;
+
+            // Audit: log generation and certification events
+            let resource_count = current_matrix.packages.len();
+            audit_log.generation_complete("nix", resource_count, resource_count * 2, gen_duration);
+
+            for added in &cert.added {
+                // Parse "package@version" from added entries
+                if let Some((pkg, ver)) = added.split_once('@') {
+                    audit_log.certify_complete(pkg, ver, "verified", total_duration);
+                }
+            }
+
+            if cert.added.is_empty() && cert.updated.is_empty() {
+                // No-op certification, log a summary event
+                audit_log.log("certify_noop", serde_json::json!({
+                    "total_verified": cert.total_verified,
+                    "duration_ms": total_duration,
+                }));
+            }
         }
     }
 

@@ -2,6 +2,7 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
 
+use crate::audit::AuditLog;
 use crate::git::GitOps;
 use crate::provider::GitHubProvider;
 use crate::watch_cache::{RepoState, WatchCache};
@@ -168,6 +169,7 @@ pub async fn run_watch_cycle(
     cache: &dyn WatchCache,
     matrix_appender: &dyn MatrixAppender,
     git_ops: &dyn GitOps,
+    audit: &AuditLog,
 ) -> Result<WatchCycleSummary> {
     let org = workspace
         .org
@@ -238,6 +240,9 @@ pub async fn run_watch_cycle(
             if is_new {
                 // Strip leading 'v' for version string
                 let clean_version = version.strip_prefix('v').unwrap_or(version);
+                // Audit: version detected
+                audit.version_detected(org, repo_name, clean_version, &head, "tags");
+
                 match matrix_appender.append_entry(
                     &matrix_file,
                     repo_name,
@@ -247,6 +252,7 @@ pub async fn run_watch_cycle(
                 ) {
                     Ok(true) => {
                         summary.new_versions += 1;
+                        audit.matrix_entry_appended(repo_name, clean_version, "pending");
                         println!("  [new] {repo_name} {version}");
                     }
                     Ok(false) => {
@@ -291,8 +297,15 @@ pub async fn run_watch_cycle(
                     );
                     if let Err(e) = git_ops.commit(&repo_dir, &msg) {
                         eprintln!("  [warn] git commit failed: {e}");
-                    } else if let Err(e) = git_ops.push(&repo_dir) {
-                        eprintln!("  [warn] git push failed: {e}");
+                    } else {
+                        audit.commit_pushed(
+                            &workspace.name,
+                            "(auto)",
+                            &msg,
+                        );
+                        if let Err(e) = git_ops.push(&repo_dir) {
+                            eprintln!("  [warn] git push failed: {e}");
+                        }
                     }
                 }
                 Ok(false) => {
@@ -469,6 +482,10 @@ mod tests {
         }
     }
 
+    fn test_audit() -> crate::audit::AuditLog {
+        crate::audit::AuditLog::new(std::path::PathBuf::from("/tmp/akeyless-matrix-test-audit.jsonl"))
+    }
+
     // -----------------------------------------------------------------------
     // Tests
     // -----------------------------------------------------------------------
@@ -495,7 +512,8 @@ mod tests {
         };
         let git_ops = MockGitOps;
 
-        let summary = run_watch_cycle(&ws, true, &github, &cache, &appender, &git_ops)
+        let audit = test_audit();
+        let summary = run_watch_cycle(&ws, true, &github, &cache, &appender, &git_ops, &audit)
             .await
             .unwrap();
 
@@ -542,7 +560,8 @@ mod tests {
         };
         let git_ops = MockGitOps;
 
-        let summary = run_watch_cycle(&ws, true, &github, &cache, &appender, &git_ops)
+        let audit = test_audit();
+        let summary = run_watch_cycle(&ws, true, &github, &cache, &appender, &git_ops, &audit)
             .await
             .unwrap();
 
@@ -588,7 +607,8 @@ mod tests {
 
         let git_ops = RecordingGitOps::new();
 
-        let summary = run_watch_cycle(&ws, true, &github, &cache, &appender, &git_ops)
+        let audit = test_audit();
+        let summary = run_watch_cycle(&ws, true, &github, &cache, &appender, &git_ops, &audit)
             .await
             .unwrap();
 
@@ -623,7 +643,8 @@ mod tests {
 
         let git_ops = MockGitOps;
 
-        let summary = run_watch_cycle(&ws, true, &github, &cache, &appender, &git_ops)
+        let audit = test_audit();
+        let summary = run_watch_cycle(&ws, true, &github, &cache, &appender, &git_ops, &audit)
             .await
             .unwrap();
 
@@ -668,7 +689,8 @@ mod tests {
 
         let git_ops = MockGitOps;
 
-        let summary = run_watch_cycle(&ws, true, &github, &cache, &appender, &git_ops)
+        let audit = test_audit();
+        let summary = run_watch_cycle(&ws, true, &github, &cache, &appender, &git_ops, &audit)
             .await
             .unwrap();
 
