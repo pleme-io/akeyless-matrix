@@ -66,7 +66,7 @@ All I/O boundaries use traits for testability:
 
 ## Testing
 
-54 tests across 9 modules. Run: `cargo test`
+67 tests across 9 modules. Run: `cargo test`
 
 Key test patterns:
 - `MockRunner` for process execution
