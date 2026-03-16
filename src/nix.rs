@@ -631,7 +631,9 @@ pub fn generate_csharp_builds(matrix: &Matrix) -> String {
             let _ = writeln!(out, "    src = sources.{src_key};");
 
             if let Some(ref nh) = entry.nuget_deps_hash {
-                let _ = writeln!(out, "    nugetDepsHash = \"{nh}\";");
+                let _ = writeln!(out, "    nugetDeps = \"{nh}\";");
+            } else {
+                let _ = writeln!(out, "    # TODO: nugetDeps requires a deps.json path — run `nix build` to generate");
             }
 
             let _ = writeln!(out, "    description = \"{}\";", nix_escape(&pkg.description));
@@ -1306,7 +1308,7 @@ mod tests {
         assert!(output.contains("mkDotnetPackage"));
         assert!(output.contains(r#"pname = "akeyless-csharp-sdk";"#));
         assert!(output.contains("sources.csharp-sdk"));
-        assert!(output.contains(r#"nugetDepsHash = "sha256-nuget456";"#));
+        assert!(output.contains(r#"nugetDeps = "sha256-nuget456";"#));
         assert!(output.contains(r#"description = "Akeyless C# SDK";"#));
     }
 
@@ -1537,6 +1539,128 @@ mod tests {
             .next()
             .unwrap();
         assert!(!tier3_section.contains("akeyless-ruby-sdk"));
+    }
+
+    // ---------------------------------------------------------------------------
+    // Content-level tests: verify generated Nix output for each language
+    // ---------------------------------------------------------------------------
+
+    #[test]
+    fn test_java_builds_content_verified_package() {
+        let matrix = test_java_matrix();
+        let output = generate_java_builds(&matrix);
+
+        // Builder call
+        assert!(output.contains("mkJavaMavenPackage pkgs {"));
+        // Maven hash emitted
+        assert!(output.contains(r#"mvnHash = "sha256-maven123";"#));
+        // Description present
+        assert!(output.contains(r#"description = "Akeyless Java SDK";"#));
+        // Homepage present
+        assert!(output.contains(r#"homepage = "https://github.com/akeylesslabs/akeyless-java";"#));
+        // Source key derived correctly (strips akeyless- prefix)
+        assert!(output.contains("sources.java-sdk.meta.version"));
+        assert!(output.contains("src = sources.java-sdk;"));
+    }
+
+    #[test]
+    fn test_java_builds_no_maven_hash() {
+        let mut matrix = test_java_matrix();
+        let pkg = matrix.packages.get_mut("akeyless-java-sdk").unwrap();
+        pkg.versions.get_mut("5.0.22").unwrap().maven_hash = None;
+
+        let output = generate_java_builds(&matrix);
+        // When maven_hash is None, mvnHash should not be emitted
+        assert!(!output.contains("mvnHash"));
+        // But the package should still be present
+        assert!(output.contains("akeyless-java-sdk"));
+    }
+
+    #[test]
+    fn test_csharp_builds_content_with_nuget_deps() {
+        let matrix = test_csharp_matrix();
+        let output = generate_csharp_builds(&matrix);
+
+        // Builder call
+        assert!(output.contains("mkDotnetPackage pkgs {"));
+        // nugetDeps emitted with correct attr name (not nugetDepsHash)
+        assert!(output.contains(r#"nugetDeps = "sha256-nuget456";"#));
+        assert!(!output.contains("nugetDepsHash"));
+        // Description present
+        assert!(output.contains(r#"description = "Akeyless C# SDK";"#));
+        // Source key
+        assert!(output.contains("sources.csharp-sdk.meta.version"));
+        assert!(output.contains("src = sources.csharp-sdk;"));
+    }
+
+    #[test]
+    fn test_csharp_builds_content_without_nuget_deps() {
+        let mut matrix = test_csharp_matrix();
+        let pkg = matrix.packages.get_mut("akeyless-csharp-sdk").unwrap();
+        pkg.versions.get_mut("2.0.0").unwrap().nuget_deps_hash = None;
+
+        let output = generate_csharp_builds(&matrix);
+        // When nuget_deps_hash is None, emit a TODO comment
+        assert!(output.contains("# TODO: nugetDeps requires a deps.json path"));
+        // nugetDeps should NOT be emitted as an attribute
+        assert!(!output.contains("nugetDeps ="));
+        // Package should still be present
+        assert!(output.contains("akeyless-csharp-sdk"));
+    }
+
+    #[test]
+    fn test_ruby_builds_content_verified_package() {
+        let matrix = test_ruby_matrix();
+        let output = generate_ruby_builds(&matrix);
+
+        // Source-only pattern: inherit src
+        assert!(output.contains("inherit (sources.ruby-sdk) src;"));
+        // Version from source registry
+        assert!(output.contains("version = sources.ruby-sdk.meta.version;"));
+        // Description present
+        assert!(output.contains(r#"description = "Akeyless Ruby SDK";"#));
+        // Homepage present
+        assert!(output.contains(r#"homepage = "https://github.com/akeylesslabs/akeyless-ruby";"#));
+        // Header comment
+        assert!(output.contains("Source-only (no Nix builder yet)"));
+        // Function signature takes only sources
+        assert!(output.contains("{ sources }:"));
+    }
+
+    #[test]
+    fn test_php_builds_content_verified_package() {
+        let matrix = test_php_matrix();
+        let output = generate_php_builds(&matrix);
+
+        // Source-only pattern
+        assert!(output.contains("inherit (sources.php-sdk) src;"));
+        assert!(output.contains("version = sources.php-sdk.meta.version;"));
+        // Description present
+        assert!(output.contains(r#"description = "Akeyless PHP SDK";"#));
+        // Homepage present
+        assert!(output.contains(r#"homepage = "https://github.com/akeylesslabs/akeyless-php";"#));
+        // Header comment
+        assert!(output.contains("Source-only (no Nix builder yet)"));
+        // Function signature
+        assert!(output.contains("{ sources }:"));
+    }
+
+    #[test]
+    fn test_helm_builds_content_verified_package() {
+        let matrix = test_helm_matrix();
+        let output = generate_helm_builds(&matrix);
+
+        // Source-only pattern
+        assert!(output.contains("inherit (sources.helm-charts) src;"));
+        assert!(output.contains("version = sources.helm-charts.meta.version;"));
+        // Description present
+        assert!(output.contains(r#"description = "Akeyless Helm Charts";"#));
+        // Homepage present
+        assert!(output.contains(r#"homepage = "https://github.com/akeylesslabs/helm-charts";"#));
+        // Header comment
+        assert!(output.contains("Source-only (no Nix builder yet)"));
+        // Attr name
+        assert!(output.contains("akeyless-helm-charts = {"));
     }
 }
 
