@@ -60,6 +60,8 @@ pub fn compute_fingerprint(matrix: &Matrix) -> String {
                 .as_deref()
                 .or(entry.cargo_hash.as_deref())
                 .or(entry.npm_deps_hash.as_deref())
+                .or(entry.maven_hash.as_deref())
+                .or(entry.nuget_deps_hash.as_deref())
                 .unwrap_or("")
                 .to_string();
 
