@@ -284,6 +284,20 @@ pub struct Matrix {
 // Implementation
 // ---------------------------------------------------------------------------
 
+impl VersionEntry {
+    /// Return the primary build hash for this entry, cascading through
+    /// vendor -> cargo -> npm_deps -> maven -> nuget, returning `None`
+    /// if no build-specific hash is set.
+    #[must_use]
+    pub fn build_hash(&self) -> Option<&str> {
+        self.vendor_hash.as_deref()
+            .or(self.cargo_hash.as_deref())
+            .or(self.npm_deps_hash.as_deref())
+            .or(self.maven_hash.as_deref())
+            .or(self.nuget_deps_hash.as_deref())
+    }
+}
+
 impl Matrix {
     /// Load and parse `matrix.toml` from the given path.
     pub fn load_from_path(path: &Path) -> Result<Self> {
@@ -796,6 +810,27 @@ status = "verified"
             assert_eq!(*t, t.to_string().parse::<TrackMode>().unwrap());
         }
         assert!("invalid".parse::<TrackMode>().is_err());
+    }
+
+    #[test]
+    fn test_build_hash_cascade() {
+        let mut entry = VersionEntry::default();
+        assert!(entry.build_hash().is_none());
+
+        entry.nuget_deps_hash = Some("nuget".into());
+        assert_eq!(entry.build_hash(), Some("nuget"));
+
+        entry.maven_hash = Some("maven".into());
+        assert_eq!(entry.build_hash(), Some("maven"));
+
+        entry.npm_deps_hash = Some("npm".into());
+        assert_eq!(entry.build_hash(), Some("npm"));
+
+        entry.cargo_hash = Some("cargo".into());
+        assert_eq!(entry.build_hash(), Some("cargo"));
+
+        entry.vendor_hash = Some("vendor".into());
+        assert_eq!(entry.build_hash(), Some("vendor"));
     }
 
     #[test]
