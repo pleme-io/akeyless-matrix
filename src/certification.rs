@@ -53,14 +53,7 @@ pub fn compute_fingerprint(matrix: &Matrix) -> String {
             pkg.versions.iter()
                 .filter(|(_, entry)| entry.status == Status::Verified)
                 .map(move |(ver, entry)| {
-                    let build_hash = entry
-                        .vendor_hash.as_deref()
-                        .or(entry.cargo_hash.as_deref())
-                        .or(entry.npm_deps_hash.as_deref())
-                        .or(entry.maven_hash.as_deref())
-                        .or(entry.nuget_deps_hash.as_deref())
-                        .unwrap_or("")
-                        .to_string();
+                    let build_hash = entry.build_hash().unwrap_or("").to_string();
 
                     VerifiedEntry {
                         package: pkg_name.clone(),
