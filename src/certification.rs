@@ -206,7 +206,11 @@ pub fn record(
 
     // Skip if fingerprint matches the latest entry (no-op certification)
     if parent_id.as_deref() == Some(&fingerprint) {
-        return Ok(log.entries.last().unwrap().clone());
+        return log
+            .entries
+            .last()
+            .cloned()
+            .context("certification log has parent_id but no entries");
     }
 
     let entry = CertificationEntry {
