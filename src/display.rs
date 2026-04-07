@@ -4,7 +4,7 @@ use crate::matrix::{Matrix, Status};
 
 /// Print the status table showing all packages, their latest version, status,
 /// and verification date.
-pub fn print_status_table(matrix: &Matrix) {
+pub(crate) fn print_status_table(matrix: &Matrix) {
     println!(
         "  {:<32} {:<20} {:<12} {}",
         "Package".bold(),
@@ -23,8 +23,7 @@ pub fn print_status_table(matrix: &Matrix) {
                 (ver.to_string(), entry.status, date_str)
             }
             None => {
-                // Fall back to the latest version entry regardless of status
-                if let Some((ver, entry)) = pkg.versions.iter().last() {
+                if let Some((ver, entry)) = pkg.versions.iter().next_back() {
                     let date_str = entry
                         .verified_at
                         .map_or_else(|| "-".to_string(), |d| d.format("%Y-%m-%d").to_string());
@@ -40,7 +39,6 @@ pub fn print_status_table(matrix: &Matrix) {
         println!("  {name:<32} {version:<20} {status_str:<12} {date}");
     }
 
-    // Summary counts
     let total = matrix.packages.len();
     let verified = matrix
         .packages
@@ -71,7 +69,8 @@ fn format_status(status: Status) -> String {
     }
 }
 
-pub fn print_build_start(pkg: &str, version: &str) {
+/// Log the start of a build step to the terminal.
+pub(crate) fn print_build_start(pkg: &str, version: &str) {
     println!(
         "  [{}] building {} {}",
         ">>".cyan(),
@@ -80,7 +79,8 @@ pub fn print_build_start(pkg: &str, version: &str) {
     );
 }
 
-pub fn print_build_success(pkg: &str, version: &str) {
+/// Log a successful build step to the terminal.
+pub(crate) fn print_build_success(pkg: &str, version: &str) {
     println!(
         "  [{}] {} {} verified",
         "ok".green(),
@@ -89,7 +89,8 @@ pub fn print_build_success(pkg: &str, version: &str) {
     );
 }
 
-pub fn print_build_failure(pkg: &str, version: &str, err: &str) {
+/// Log a failed build step to the terminal.
+pub(crate) fn print_build_failure(pkg: &str, version: &str, err: &str) {
     println!(
         "  [{}] {} {} broken: {}",
         "!!".red(),
@@ -99,11 +100,13 @@ pub fn print_build_failure(pkg: &str, version: &str, err: &str) {
     );
 }
 
-pub fn print_generate_file(path: &str) {
+/// Log a generated file path to the terminal.
+pub(crate) fn print_generate_file(path: &str) {
     println!("  [{}] generated {}", "ok".green(), path);
 }
 
-pub fn print_add_success(pkg: &str, version: &str) {
+/// Log a successful `add` operation to the terminal.
+pub(crate) fn print_add_success(pkg: &str, version: &str) {
     println!(
         "  [{}] added {} {} ({})",
         "ok".green(),
@@ -113,7 +116,8 @@ pub fn print_add_success(pkg: &str, version: &str) {
     );
 }
 
-pub fn print_prefetch_start(owner: &str, repo: &str, rev: &str) {
+/// Log the start of a source prefetch to the terminal.
+pub(crate) fn print_prefetch_start(owner: &str, repo: &str, rev: &str) {
     println!(
         "  [{}] prefetching {}/{} @ {}",
         ">>".cyan(),
@@ -123,7 +127,8 @@ pub fn print_prefetch_start(owner: &str, repo: &str, rev: &str) {
     );
 }
 
-pub fn print_hash_extraction(hash_type: &str) {
+/// Log the start of hash extraction to the terminal.
+pub(crate) fn print_hash_extraction(hash_type: &str) {
     println!(
         "  [{}] extracting {} hash via nix build",
         ">>".cyan(),
@@ -131,13 +136,15 @@ pub fn print_hash_extraction(hash_type: &str) {
     );
 }
 
-pub fn print_header(title: &str) {
+/// Print a bold section header to the terminal.
+pub(crate) fn print_header(title: &str) {
     println!();
     println!("{}", title.bold());
     println!();
 }
 
-pub fn print_certification(cert: &crate::certification::CertificationEntry) {
+/// Print certification results to the terminal.
+pub(crate) fn print_certification(cert: &crate::certification::CertificationEntry) {
     println!();
     println!("{}", "Certification".bold());
     println!();
