@@ -484,4 +484,121 @@ mod tests {
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("disk full"));
     }
+
+    /// Simulates the certify flow: build marks entries verified, then generate
+    /// writes Nix files with the verified hashes. Uses only mock I/O.
+    #[test]
+    fn test_certify_then_generate_flow() {
+        use crate::matrix::{
+            Builder, Language, Package, Status, TrackMode, VersionEntry,
+        };
+
+        let mut go_ver = VersionEntry {
+            rev: "abc123".into(),
+            source_hash: Some("sha256-gosrc".into()),
+            vendor_hash: Some("sha256-govendor".into()),
+            cargo_hash: None,
+            npm_deps_hash: None,
+            maven_hash: None,
+            nuget_deps_hash: None,
+            status: Status::Pending,
+            verified_at: None,
+            hash_aarch64_darwin: None,
+            hash_x86_64_darwin: None,
+            hash_x86_64_linux: None,
+            hash_aarch64_linux: None,
+        };
+        go_ver.status = Status::Verified;
+
+        let mut go_versions = BTreeMap::new();
+        go_versions.insert("1.0.0".into(), go_ver);
+
+        let mut packages = BTreeMap::new();
+        packages.insert(
+            "akeyless-cli-tool".into(),
+            Package {
+                owner: "testorg".into(),
+                repo: "cli-tool".into(),
+                language: Language::Go,
+                builder: Builder::MkGoTool,
+                tier: 1,
+                sub_packages: Some(vec![".".into()]),
+                proxy_vendor: None,
+                license: None,
+                description: "CLI tool".into(),
+                homepage: "https://example.com".into(),
+                fork_of: None,
+                fork_reason: None,
+                native_build_inputs: None,
+                python_deps: None,
+                pname_override: None,
+                dont_npm_build: None,
+                extra_post_install: None,
+                binary_name: None,
+                platform_urls: None,
+                track: TrackMode::default(),
+                unstable_base: None,
+                versions: go_versions,
+            },
+        );
+        let matrix = Matrix { packages };
+
+        let prev_matrix = Matrix {
+            packages: BTreeMap::new(),
+        };
+        let (added, updated) =
+            crate::certification::compute_delta(&prev_matrix, &matrix);
+        assert_eq!(added, vec!["akeyless-cli-tool@1.0.0"]);
+        assert!(updated.is_empty());
+
+        let fp = crate::certification::compute_fingerprint(&matrix);
+        assert_eq!(fp.len(), 64);
+
+        let store = InMemoryStore {
+            matrix: matrix.clone(),
+        };
+        let writer = RecordingWriter::new();
+        run(Path::new("/fake/matrix.toml"), None, &store, &writer).unwrap();
+
+        let files = writer.files.lock().unwrap();
+        assert_eq!(files.len(), 12);
+
+        let sources = files
+            .iter()
+            .find(|(p, _)| p.display().to_string().ends_with("lib/sources.nix"))
+            .map(|(_, c)| c.clone())
+            .unwrap();
+        assert!(sources.contains(r#"hash = "sha256-gosrc";"#));
+
+        let go_build = files
+            .iter()
+            .find(|(p, _)| p.display().to_string().ends_with("builds/go/default.nix"))
+            .map(|(_, c)| c.clone())
+            .unwrap();
+        assert!(go_build.contains(r#"vendorHash = "sha256-govendor";"#));
+    }
+
+    struct FailingDirWriter;
+
+    impl FileWriter for FailingDirWriter {
+        fn write_file(&self, _path: &Path, _content: &str) -> Result<()> {
+            Ok(())
+        }
+        fn create_dir_all(&self, _path: &Path) -> Result<()> {
+            anyhow::bail!("permission denied")
+        }
+    }
+
+    #[test]
+    fn test_generate_propagates_dir_creation_error() {
+        let matrix = Matrix {
+            packages: BTreeMap::new(),
+        };
+        let store = InMemoryStore { matrix };
+        let writer = FailingDirWriter;
+
+        let result = run(Path::new("/fake/matrix.toml"), None, &store, &writer);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("permission denied"));
+    }
 }
