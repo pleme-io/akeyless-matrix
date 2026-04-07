@@ -546,4 +546,306 @@ mod tests {
         // akeyless-cli latest changed from 0.6.1 to 0.7.0
         assert_eq!(updated, vec!["akeyless-cli: 0.6.1 -> 0.7.0"]);
     }
+
+    #[test]
+    fn test_fingerprint_empty_matrix() {
+        let matrix = Matrix {
+            packages: BTreeMap::new(),
+        };
+        let fp = compute_fingerprint(&matrix);
+        assert!(!fp.is_empty());
+        assert_eq!(fp.len(), 64);
+    }
+
+    #[test]
+    fn test_fingerprint_all_pending_same_as_empty() {
+        let mut pkgs = BTreeMap::new();
+        pkgs.insert(
+            "akeyless-cli".to_string(),
+            make_pkg(vec![("0.6.1", "sha256-a", "sha256-v", Status::Pending)]),
+        );
+        let with_pending = Matrix { packages: pkgs };
+        let empty = Matrix {
+            packages: BTreeMap::new(),
+        };
+        assert_eq!(
+            compute_fingerprint(&with_pending),
+            compute_fingerprint(&empty)
+        );
+    }
+
+    #[test]
+    fn test_fingerprint_broken_entries_excluded() {
+        let mut pkgs = BTreeMap::new();
+        pkgs.insert(
+            "akeyless-cli".to_string(),
+            make_pkg(vec![
+                ("0.6.1", "sha256-a", "sha256-v", Status::Verified),
+                ("0.7.0", "sha256-b", "sha256-w", Status::Broken),
+            ]),
+        );
+        let with_broken = Matrix {
+            packages: pkgs.clone(),
+        };
+
+        let mut pkgs2 = BTreeMap::new();
+        pkgs2.insert(
+            "akeyless-cli".to_string(),
+            make_pkg(vec![("0.6.1", "sha256-a", "sha256-v", Status::Verified)]),
+        );
+        let without_broken = Matrix { packages: pkgs2 };
+
+        assert_eq!(
+            compute_fingerprint(&with_broken),
+            compute_fingerprint(&without_broken)
+        );
+    }
+
+    #[test]
+    fn test_fingerprint_changes_on_hash_change() {
+        let mut pkgs1 = BTreeMap::new();
+        pkgs1.insert(
+            "akeyless-cli".to_string(),
+            make_pkg(vec![("0.6.1", "sha256-a", "sha256-v", Status::Verified)]),
+        );
+        let m1 = Matrix { packages: pkgs1 };
+
+        let mut pkgs2 = BTreeMap::new();
+        pkgs2.insert(
+            "akeyless-cli".to_string(),
+            make_pkg(vec![("0.6.1", "sha256-DIFFERENT", "sha256-v", Status::Verified)]),
+        );
+        let m2 = Matrix { packages: pkgs2 };
+
+        assert_ne!(compute_fingerprint(&m1), compute_fingerprint(&m2));
+    }
+
+    #[test]
+    fn test_delta_new_package() {
+        let prev = Matrix {
+            packages: BTreeMap::new(),
+        };
+
+        let mut curr_pkgs = BTreeMap::new();
+        curr_pkgs.insert(
+            "akeyless-cli".to_string(),
+            make_pkg(vec![("1.0.0", "sha256-a", "sha256-v", Status::Verified)]),
+        );
+        let curr = Matrix { packages: curr_pkgs };
+
+        let (added, updated) = compute_delta(&prev, &curr);
+        assert_eq!(added, vec!["akeyless-cli@1.0.0"]);
+        assert!(updated.is_empty());
+    }
+
+    #[test]
+    fn test_load_save_log_roundtrip() {
+        let dir = std::env::temp_dir().join("cert-test-roundtrip");
+        std::fs::create_dir_all(&dir).unwrap();
+
+        let log = CertificationLog {
+            entries: vec![
+                CertificationEntry {
+                    id: "first-fingerprint".into(),
+                    parent_id: None,
+                    at: Utc::now(),
+                    added: vec!["pkg@1.0".into()],
+                    updated: vec![],
+                    total_verified: 1,
+                },
+                CertificationEntry {
+                    id: "second-fingerprint".into(),
+                    parent_id: Some("first-fingerprint".into()),
+                    at: Utc::now(),
+                    added: vec!["pkg@2.0".into()],
+                    updated: vec!["pkg: 1.0 -> 2.0".into()],
+                    total_verified: 2,
+                },
+            ],
+        };
+
+        save_log(&dir, &log).unwrap();
+        let loaded = load_log(&dir).unwrap();
+
+        assert_eq!(loaded.entries.len(), 2);
+        assert_eq!(loaded.entries[0].id, "first-fingerprint");
+        assert!(loaded.entries[0].parent_id.is_none());
+        assert_eq!(loaded.entries[1].id, "second-fingerprint");
+        assert_eq!(
+            loaded.entries[1].parent_id.as_deref(),
+            Some("first-fingerprint")
+        );
+        assert_eq!(loaded.entries[1].added, vec!["pkg@2.0"]);
+        assert_eq!(loaded.entries[1].updated, vec!["pkg: 1.0 -> 2.0"]);
+
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_load_log_missing_dir() {
+        let dir = std::path::Path::new("/tmp/cert-test-nonexistent-dir-xyz");
+        let log = load_log(dir).unwrap();
+        assert!(log.entries.is_empty());
+    }
+
+    #[test]
+    fn test_record_creates_entry() {
+        let dir = std::env::temp_dir().join("cert-test-record");
+        std::fs::create_dir_all(&dir).unwrap();
+        let cert_path = dir.join("certifications.toml");
+        if cert_path.exists() {
+            std::fs::remove_file(&cert_path).unwrap();
+        }
+
+        let prev = Matrix {
+            packages: BTreeMap::new(),
+        };
+        let mut curr_pkgs = BTreeMap::new();
+        curr_pkgs.insert(
+            "akeyless-cli".to_string(),
+            make_pkg(vec![("1.0.0", "sha256-a", "sha256-v", Status::Verified)]),
+        );
+        let curr = Matrix { packages: curr_pkgs };
+
+        let entry = record(&dir, &prev, &curr).unwrap();
+        assert!(!entry.id.is_empty());
+        assert!(entry.parent_id.is_none());
+        assert_eq!(entry.total_verified, 1);
+        assert_eq!(entry.added, vec!["akeyless-cli@1.0.0"]);
+
+        let log = load_log(&dir).unwrap();
+        assert_eq!(log.entries.len(), 1);
+        assert_eq!(log.entries[0].id, entry.id);
+
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_record_skips_noop() {
+        let dir = std::env::temp_dir().join("cert-test-noop");
+        std::fs::create_dir_all(&dir).unwrap();
+        let cert_path = dir.join("certifications.toml");
+        if cert_path.exists() {
+            std::fs::remove_file(&cert_path).unwrap();
+        }
+
+        let mut pkgs = BTreeMap::new();
+        pkgs.insert(
+            "akeyless-cli".to_string(),
+            make_pkg(vec![("1.0.0", "sha256-a", "sha256-v", Status::Verified)]),
+        );
+        let matrix = Matrix {
+            packages: pkgs.clone(),
+        };
+
+        let entry1 = record(&dir, &Matrix { packages: BTreeMap::new() }, &matrix).unwrap();
+
+        let entry2 = record(&dir, &matrix, &matrix).unwrap();
+        assert_eq!(entry1.id, entry2.id);
+
+        let log = load_log(&dir).unwrap();
+        assert_eq!(log.entries.len(), 1);
+
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_record_chains_parent_id() {
+        let dir = std::env::temp_dir().join("cert-test-chain");
+        std::fs::create_dir_all(&dir).unwrap();
+        let cert_path = dir.join("certifications.toml");
+        if cert_path.exists() {
+            std::fs::remove_file(&cert_path).unwrap();
+        }
+
+        let mut pkgs1 = BTreeMap::new();
+        pkgs1.insert(
+            "akeyless-cli".to_string(),
+            make_pkg(vec![("1.0.0", "sha256-a", "sha256-v", Status::Verified)]),
+        );
+        let m1 = Matrix { packages: pkgs1 };
+
+        let entry1 = record(
+            &dir,
+            &Matrix { packages: BTreeMap::new() },
+            &m1,
+        )
+        .unwrap();
+
+        let mut pkgs2 = BTreeMap::new();
+        pkgs2.insert(
+            "akeyless-cli".to_string(),
+            make_pkg(vec![
+                ("1.0.0", "sha256-a", "sha256-v", Status::Verified),
+                ("2.0.0", "sha256-b", "sha256-w", Status::Verified),
+            ]),
+        );
+        let m2 = Matrix { packages: pkgs2 };
+
+        let entry2 = record(&dir, &m1, &m2).unwrap();
+        assert_eq!(entry2.parent_id.as_deref(), Some(entry1.id.as_str()));
+        assert_eq!(entry2.total_verified, 2);
+
+        let log = load_log(&dir).unwrap();
+        assert_eq!(log.entries.len(), 2);
+
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_fingerprint_with_multiple_hash_types() {
+        let mut vers = BTreeMap::new();
+        vers.insert(
+            "1.0.0".to_string(),
+            VersionEntry {
+                rev: "abc".into(),
+                source_hash: Some("sha256-src".into()),
+                vendor_hash: None,
+                cargo_hash: Some("sha256-cargo".into()),
+                npm_deps_hash: None,
+                maven_hash: None,
+                nuget_deps_hash: None,
+                status: Status::Verified,
+                verified_at: None,
+                hash_aarch64_darwin: None,
+                hash_x86_64_darwin: None,
+                hash_x86_64_linux: None,
+                hash_aarch64_linux: None,
+            },
+        );
+        let pkg = Package {
+            owner: "t".into(),
+            repo: "t".into(),
+            language: Language::Rust,
+            builder: Builder::BuildRustPackage,
+            tier: 1,
+            sub_packages: None,
+            proxy_vendor: None,
+            license: None,
+            description: "t".into(),
+            homepage: "t".into(),
+            fork_of: None,
+            fork_reason: None,
+            native_build_inputs: None,
+            python_deps: None,
+            pname_override: None,
+            dont_npm_build: None,
+            extra_post_install: None,
+            binary_name: None,
+            platform_urls: None,
+            track: crate::matrix::TrackMode::default(),
+            unstable_base: None,
+            versions: vers,
+        };
+        let mut pkgs = BTreeMap::new();
+        pkgs.insert("akeyless-rust".to_string(), pkg);
+        let matrix = Matrix { packages: pkgs };
+
+        let fp = compute_fingerprint(&matrix);
+        assert_eq!(fp.len(), 64);
+        assert_ne!(
+            fp,
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        );
+    }
 }

@@ -642,6 +642,434 @@ status = "verified"
         assert_eq!(all[0].0, "1.0.0");
         assert_eq!(all[1].0, "1.5.0");
     }
+
+    #[test]
+    fn test_status_display() {
+        assert_eq!(Status::Pending.to_string(), "pending");
+        assert_eq!(Status::Building.to_string(), "building");
+        assert_eq!(Status::Verified.to_string(), "verified");
+        assert_eq!(Status::Broken.to_string(), "broken");
+    }
+
+    #[test]
+    fn test_language_display() {
+        assert_eq!(Language::Go.to_string(), "go");
+        assert_eq!(Language::Rust.to_string(), "rust");
+        assert_eq!(Language::Python.to_string(), "python");
+        assert_eq!(Language::TypeScript.to_string(), "typescript");
+        assert_eq!(Language::Java.to_string(), "java");
+        assert_eq!(Language::Ruby.to_string(), "ruby");
+        assert_eq!(Language::Php.to_string(), "php");
+        assert_eq!(Language::Csharp.to_string(), "csharp");
+        assert_eq!(Language::Helm.to_string(), "helm");
+    }
+
+    #[test]
+    fn test_builder_display() {
+        assert_eq!(Builder::MkGoTool.to_string(), "mkGoTool");
+        assert_eq!(Builder::MkGoLibraryCheck.to_string(), "mkGoLibraryCheck");
+        assert_eq!(Builder::BuildRustPackage.to_string(), "buildRustPackage");
+        assert_eq!(Builder::MkPythonPackage.to_string(), "mkPythonPackage");
+        assert_eq!(Builder::BuildNpmPackage.to_string(), "buildNpmPackage");
+        assert_eq!(Builder::Fetchurl.to_string(), "fetchurl");
+        assert_eq!(Builder::MkJavaMavenPackage.to_string(), "mkJavaMavenPackage");
+        assert_eq!(Builder::MkDotnetPackage.to_string(), "mkDotnetPackage");
+        assert_eq!(Builder::MkTerraformModuleCheck.to_string(), "mkTerraformModuleCheck");
+        assert_eq!(Builder::None.to_string(), "none");
+    }
+
+    #[test]
+    fn test_status_serde_roundtrip() {
+        let toml_str = r#"status = "building""#;
+        #[derive(serde::Deserialize)]
+        struct Wrap {
+            status: Status,
+        }
+        let w: Wrap = toml::from_str(toml_str).unwrap();
+        assert_eq!(w.status, Status::Building);
+    }
+
+    #[test]
+    fn test_builder_serde_roundtrip() {
+        let toml_str = r#"builder = "mkTerraformModuleCheck""#;
+        #[derive(serde::Deserialize)]
+        struct Wrap {
+            builder: Builder,
+        }
+        let w: Wrap = toml::from_str(toml_str).unwrap();
+        assert_eq!(w.builder, Builder::MkTerraformModuleCheck);
+    }
+
+    #[test]
+    fn test_language_serde_roundtrip() {
+        let toml_str = r#"language = "csharp""#;
+        #[derive(serde::Deserialize)]
+        struct Wrap {
+            language: Language,
+        }
+        let w: Wrap = toml::from_str(toml_str).unwrap();
+        assert_eq!(w.language, Language::Csharp);
+    }
+
+    #[test]
+    fn test_track_mode_default() {
+        assert_eq!(TrackMode::default(), TrackMode::Tags);
+    }
+
+    #[test]
+    fn test_track_mode_serde() {
+        let toml_str = r#"track = "commits""#;
+        #[derive(serde::Deserialize)]
+        struct Wrap {
+            track: TrackMode,
+        }
+        let w: Wrap = toml::from_str(toml_str).unwrap();
+        assert_eq!(w.track, TrackMode::Commits);
+    }
+
+    #[test]
+    fn test_track_mode_binary() {
+        let toml_str = r#"track = "binary""#;
+        #[derive(serde::Deserialize)]
+        struct Wrap {
+            track: TrackMode,
+        }
+        let w: Wrap = toml::from_str(toml_str).unwrap();
+        assert_eq!(w.track, TrackMode::Binary);
+    }
+
+    #[test]
+    fn test_from_str_all_languages() {
+        let toml = r#"
+[packages.test-go]
+owner = "o"
+repo = "r"
+language = "go"
+builder = "mkGoTool"
+tier = 1
+description = "d"
+homepage = "h"
+
+[packages.test-rust]
+owner = "o"
+repo = "r"
+language = "rust"
+builder = "buildRustPackage"
+tier = 2
+description = "d"
+homepage = "h"
+
+[packages.test-py]
+owner = "o"
+repo = "r"
+language = "python"
+builder = "mkPythonPackage"
+tier = 3
+description = "d"
+homepage = "h"
+
+[packages.test-ts]
+owner = "o"
+repo = "r"
+language = "typescript"
+builder = "buildNpmPackage"
+tier = 2
+description = "d"
+homepage = "h"
+
+[packages.test-java]
+owner = "o"
+repo = "r"
+language = "java"
+builder = "mkJavaMavenPackage"
+tier = 3
+description = "d"
+homepage = "h"
+
+[packages.test-csharp]
+owner = "o"
+repo = "r"
+language = "csharp"
+builder = "mkDotnetPackage"
+tier = 3
+description = "d"
+homepage = "h"
+
+[packages.test-helm]
+owner = "o"
+repo = "r"
+language = "helm"
+builder = "none"
+tier = 3
+description = "d"
+homepage = "h"
+"#;
+        let matrix = Matrix::from_str(toml).unwrap();
+        assert_eq!(matrix.packages.len(), 7);
+        assert_eq!(matrix.packages["test-go"].language, Language::Go);
+        assert_eq!(matrix.packages["test-rust"].language, Language::Rust);
+        assert_eq!(matrix.packages["test-py"].language, Language::Python);
+        assert_eq!(matrix.packages["test-ts"].language, Language::TypeScript);
+        assert_eq!(matrix.packages["test-java"].language, Language::Java);
+        assert_eq!(matrix.packages["test-csharp"].language, Language::Csharp);
+        assert_eq!(matrix.packages["test-helm"].language, Language::Helm);
+    }
+
+    #[test]
+    fn test_from_str_with_optional_fields() {
+        let toml = r#"
+[packages.akeyless-test]
+owner = "org"
+repo = "test"
+language = "go"
+builder = "mkGoTool"
+tier = 1
+description = "test"
+homepage = "https://example.com"
+license = "MIT"
+fork_of = "upstream/repo"
+fork_reason = "go mod fix"
+proxy_vendor = true
+sub_packages = ["cmd/main", "cmd/helper"]
+extra_post_install = "echo done"
+track = "commits"
+unstable_base = "0.1.0"
+"#;
+        let matrix = Matrix::from_str(toml).unwrap();
+        let pkg = &matrix.packages["akeyless-test"];
+        assert_eq!(pkg.license.as_deref(), Some("MIT"));
+        assert_eq!(pkg.fork_of.as_deref(), Some("upstream/repo"));
+        assert_eq!(pkg.fork_reason.as_deref(), Some("go mod fix"));
+        assert_eq!(pkg.proxy_vendor, Some(true));
+        assert_eq!(
+            pkg.sub_packages.as_ref().unwrap(),
+            &vec!["cmd/main".to_string(), "cmd/helper".to_string()]
+        );
+        assert_eq!(pkg.track, TrackMode::Commits);
+        assert_eq!(pkg.unstable_base.as_deref(), Some("0.1.0"));
+    }
+
+    #[test]
+    fn test_from_str_version_entry_all_hashes() {
+        let toml = r#"
+[packages.akeyless-test]
+owner = "org"
+repo = "test"
+language = "go"
+builder = "fetchurl"
+tier = 1
+description = "test"
+homepage = "https://example.com"
+
+[packages.akeyless-test.versions."1.0.0"]
+rev = "abc123"
+status = "verified"
+source_hash = "sha256-src"
+vendor_hash = "sha256-vendor"
+cargo_hash = "sha256-cargo"
+npm_deps_hash = "sha256-npm"
+maven_hash = "sha256-maven"
+nuget_deps_hash = "sha256-nuget"
+hash_aarch64_darwin = "sha256-arm-darwin"
+hash_x86_64_darwin = "sha256-x86-darwin"
+hash_x86_64_linux = "sha256-x86-linux"
+hash_aarch64_linux = "sha256-arm-linux"
+"#;
+        let matrix = Matrix::from_str(toml).unwrap();
+        let entry = &matrix.packages["akeyless-test"].versions["1.0.0"];
+        assert_eq!(entry.source_hash.as_deref(), Some("sha256-src"));
+        assert_eq!(entry.vendor_hash.as_deref(), Some("sha256-vendor"));
+        assert_eq!(entry.cargo_hash.as_deref(), Some("sha256-cargo"));
+        assert_eq!(entry.npm_deps_hash.as_deref(), Some("sha256-npm"));
+        assert_eq!(entry.maven_hash.as_deref(), Some("sha256-maven"));
+        assert_eq!(entry.nuget_deps_hash.as_deref(), Some("sha256-nuget"));
+        assert_eq!(entry.hash_aarch64_darwin.as_deref(), Some("sha256-arm-darwin"));
+        assert_eq!(entry.hash_x86_64_darwin.as_deref(), Some("sha256-x86-darwin"));
+        assert_eq!(entry.hash_x86_64_linux.as_deref(), Some("sha256-x86-linux"));
+        assert_eq!(entry.hash_aarch64_linux.as_deref(), Some("sha256-arm-linux"));
+    }
+
+    #[test]
+    fn test_from_str_invalid_toml() {
+        let bad_toml = "not valid [ toml }{";
+        let result = Matrix::from_str(bad_toml);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_latest_verified_no_verified() {
+        let mut versions = BTreeMap::new();
+        versions.insert(
+            "1.0.0".to_string(),
+            VersionEntry {
+                rev: "aaa".into(),
+                source_hash: None,
+                vendor_hash: None,
+                cargo_hash: None,
+                npm_deps_hash: None,
+                maven_hash: None,
+                nuget_deps_hash: None,
+                status: Status::Pending,
+                verified_at: None,
+                hash_aarch64_darwin: None,
+                hash_x86_64_darwin: None,
+                hash_x86_64_linux: None,
+                hash_aarch64_linux: None,
+            },
+        );
+
+        let pkg = Package {
+            owner: "t".into(),
+            repo: "t".into(),
+            language: Language::Go,
+            builder: Builder::MkGoTool,
+            tier: 1,
+            sub_packages: None,
+            proxy_vendor: None,
+            license: None,
+            description: "t".into(),
+            homepage: "t".into(),
+            fork_of: None,
+            fork_reason: None,
+            native_build_inputs: None,
+            python_deps: None,
+            pname_override: None,
+            dont_npm_build: None,
+            extra_post_install: None,
+            binary_name: None,
+            platform_urls: None,
+            track: TrackMode::default(),
+            unstable_base: None,
+            versions,
+        };
+
+        assert!(Matrix::latest_verified(&pkg).is_none());
+    }
+
+    #[test]
+    fn test_all_verified_empty() {
+        let pkg = Package {
+            owner: "t".into(),
+            repo: "t".into(),
+            language: Language::Go,
+            builder: Builder::MkGoTool,
+            tier: 1,
+            sub_packages: None,
+            proxy_vendor: None,
+            license: None,
+            description: "t".into(),
+            homepage: "t".into(),
+            fork_of: None,
+            fork_reason: None,
+            native_build_inputs: None,
+            python_deps: None,
+            pname_override: None,
+            dont_npm_build: None,
+            extra_post_install: None,
+            binary_name: None,
+            platform_urls: None,
+            track: TrackMode::default(),
+            unstable_base: None,
+            versions: BTreeMap::new(),
+        };
+
+        assert!(Matrix::all_verified(&pkg).is_empty());
+    }
+
+    #[test]
+    fn test_source_key_empty_string() {
+        assert_eq!(Matrix::source_key(""), "");
+    }
+
+    #[test]
+    fn test_sanitize_version_no_dots() {
+        assert_eq!(Matrix::sanitize_version("100"), "100");
+    }
+
+    #[test]
+    fn test_sanitize_version_unstable() {
+        assert_eq!(
+            Matrix::sanitize_version("0.1.0-unstable.2026-03-14.d240017e"),
+            "0_1_0-unstable_2026-03-14_d240017e"
+        );
+    }
+
+    #[test]
+    fn test_save_load_roundtrip() {
+        let dir = std::env::temp_dir().join("matrix-save-load-test");
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("matrix.toml");
+
+        let mut versions = BTreeMap::new();
+        versions.insert(
+            "1.0.0".to_string(),
+            VersionEntry {
+                rev: "abc123".into(),
+                source_hash: Some("sha256-src".into()),
+                vendor_hash: Some("sha256-vendor".into()),
+                cargo_hash: None,
+                npm_deps_hash: None,
+                maven_hash: None,
+                nuget_deps_hash: None,
+                status: Status::Verified,
+                verified_at: None,
+                hash_aarch64_darwin: None,
+                hash_x86_64_darwin: None,
+                hash_x86_64_linux: None,
+                hash_aarch64_linux: None,
+            },
+        );
+        let mut packages = BTreeMap::new();
+        packages.insert(
+            "akeyless-test".to_string(),
+            Package {
+                owner: "testorg".into(),
+                repo: "test".into(),
+                language: Language::Go,
+                builder: Builder::MkGoTool,
+                tier: 1,
+                sub_packages: None,
+                proxy_vendor: None,
+                license: None,
+                description: "test pkg".into(),
+                homepage: "https://example.com".into(),
+                fork_of: None,
+                fork_reason: None,
+                native_build_inputs: None,
+                python_deps: None,
+                pname_override: None,
+                dont_npm_build: None,
+                extra_post_install: None,
+                binary_name: None,
+                platform_urls: None,
+                track: TrackMode::default(),
+                unstable_base: None,
+                versions,
+            },
+        );
+        let matrix = Matrix { packages };
+
+        Matrix::save_to_path(&path, &matrix).unwrap();
+        let loaded = Matrix::load_from_path(&path).unwrap();
+
+        assert_eq!(loaded.packages.len(), 1);
+        let pkg = &loaded.packages["akeyless-test"];
+        assert_eq!(pkg.owner, "testorg");
+        assert_eq!(pkg.language, Language::Go);
+        assert_eq!(pkg.builder, Builder::MkGoTool);
+        let ver = &pkg.versions["1.0.0"];
+        assert_eq!(ver.status, Status::Verified);
+        assert_eq!(ver.source_hash.as_deref(), Some("sha256-src"));
+        assert_eq!(ver.vendor_hash.as_deref(), Some("sha256-vendor"));
+
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_load_from_path_nonexistent() {
+        let result = Matrix::load_from_path(std::path::Path::new("/tmp/nonexistent-matrix-xyz.toml"));
+        assert!(result.is_err());
+    }
 }
 
 /// Test helpers available to all modules via `crate::matrix::test_helpers`.

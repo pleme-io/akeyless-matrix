@@ -672,4 +672,257 @@ mod tests {
         assert_eq!(entry.status, Status::Verified);
         assert_eq!(entry.source_hash.as_deref(), Some("sha256-JavaSrc"));
     }
+
+    #[tokio::test]
+    async fn test_build_rust_package_extracts_cargo_hash() {
+        use crate::matrix::test_helpers::{pending_version, pkg};
+
+        let mut p = pkg(Language::Rust, Builder::BuildRustPackage);
+        p.versions.insert("0.3.0".into(), pending_version("rustrev"));
+        let mut packages = BTreeMap::new();
+        packages.insert("akeyless-rust-tool".into(), p);
+        let matrix = Matrix { packages };
+        let store = InMemoryStore {
+            matrix: Mutex::new(matrix),
+        };
+
+        let runner = MockRunner {
+            responses: Mutex::new(vec![
+                CommandOutput {
+                    success: true,
+                    stdout: r#"{ hash = "sha256-RustSource"; }"#.into(),
+                    stderr: String::new(),
+                },
+                CommandOutput {
+                    success: false,
+                    stdout: String::new(),
+                    stderr: "got:    sha256-RealCargoHash=\n".into(),
+                },
+            ]),
+        };
+
+        run(
+            std::path::Path::new("fake.toml"),
+            Some("akeyless-rust-tool"),
+            &runner,
+            &store,
+        )
+        .await
+        .unwrap();
+
+        let result = store.matrix.lock().unwrap();
+        let entry = &result.packages["akeyless-rust-tool"].versions["0.3.0"];
+        assert_eq!(entry.status, Status::Verified);
+        assert_eq!(entry.source_hash.as_deref(), Some("sha256-RustSource"));
+        assert_eq!(entry.cargo_hash.as_deref(), Some("sha256-RealCargoHash="));
+    }
+
+    #[tokio::test]
+    async fn test_build_typescript_package_extracts_npm_hash() {
+        use crate::matrix::test_helpers::{pending_version, pkg};
+
+        let mut p = pkg(Language::TypeScript, Builder::BuildNpmPackage);
+        p.versions.insert("1.2.0".into(), pending_version("tsrev"));
+        let mut packages = BTreeMap::new();
+        packages.insert("akeyless-ts-tool".into(), p);
+        let matrix = Matrix { packages };
+        let store = InMemoryStore {
+            matrix: Mutex::new(matrix),
+        };
+
+        let runner = MockRunner {
+            responses: Mutex::new(vec![
+                CommandOutput {
+                    success: true,
+                    stdout: r#"{ hash = "sha256-TsSource"; }"#.into(),
+                    stderr: String::new(),
+                },
+                CommandOutput {
+                    success: false,
+                    stdout: String::new(),
+                    stderr: "got:    sha256-RealNpmHash=\n".into(),
+                },
+            ]),
+        };
+
+        run(
+            std::path::Path::new("fake.toml"),
+            Some("akeyless-ts-tool"),
+            &runner,
+            &store,
+        )
+        .await
+        .unwrap();
+
+        let result = store.matrix.lock().unwrap();
+        let entry = &result.packages["akeyless-ts-tool"].versions["1.2.0"];
+        assert_eq!(entry.status, Status::Verified);
+        assert_eq!(entry.source_hash.as_deref(), Some("sha256-TsSource"));
+        assert_eq!(entry.npm_deps_hash.as_deref(), Some("sha256-RealNpmHash="));
+    }
+
+    #[tokio::test]
+    async fn test_build_unknown_package_errors() {
+        let matrix = Matrix {
+            packages: BTreeMap::new(),
+        };
+        let store = InMemoryStore {
+            matrix: Mutex::new(matrix),
+        };
+        let runner = MockRunner {
+            responses: Mutex::new(vec![]),
+        };
+
+        let result = run(
+            std::path::Path::new("fake.toml"),
+            Some("nonexistent"),
+            &runner,
+            &store,
+        )
+        .await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("not found"));
+    }
+
+    #[tokio::test]
+    async fn test_build_skips_verified_entries() {
+        use crate::matrix::test_helpers::{pkg, verified_version};
+
+        let mut p = pkg(Language::Go, Builder::MkGoTool);
+        p.versions.insert(
+            "1.0.0".into(),
+            verified_version("abc123", "sha256-src", Some("sha256-vendor")),
+        );
+        let mut packages = BTreeMap::new();
+        packages.insert("akeyless-test".into(), p);
+        let matrix = Matrix { packages };
+        let store = InMemoryStore {
+            matrix: Mutex::new(matrix),
+        };
+
+        let runner = MockRunner {
+            responses: Mutex::new(vec![]),
+        };
+
+        run(
+            std::path::Path::new("fake.toml"),
+            None,
+            &runner,
+            &store,
+        )
+        .await
+        .unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_build_all_packages_when_no_filter() {
+        use crate::matrix::test_helpers::{pending_version, pkg};
+
+        let mut p1 = pkg(Language::Python, Builder::MkPythonPackage);
+        p1.versions.insert("1.0.0".into(), pending_version("rev1"));
+        let mut p2 = pkg(Language::Python, Builder::MkPythonPackage);
+        p2.versions.insert("2.0.0".into(), pending_version("rev2"));
+
+        let mut packages = BTreeMap::new();
+        packages.insert("akeyless-pkg-a".into(), p1);
+        packages.insert("akeyless-pkg-b".into(), p2);
+        let matrix = Matrix { packages };
+        let store = InMemoryStore {
+            matrix: Mutex::new(matrix),
+        };
+
+        let runner = MockRunner {
+            responses: Mutex::new(vec![
+                CommandOutput {
+                    success: true,
+                    stdout: r#"{ hash = "sha256-A"; }"#.into(),
+                    stderr: String::new(),
+                },
+                CommandOutput {
+                    success: true,
+                    stdout: r#"{ hash = "sha256-B"; }"#.into(),
+                    stderr: String::new(),
+                },
+            ]),
+        };
+
+        run(
+            std::path::Path::new("fake.toml"),
+            None,
+            &runner,
+            &store,
+        )
+        .await
+        .unwrap();
+
+        let result = store.matrix.lock().unwrap();
+        assert_eq!(result.packages["akeyless-pkg-a"].versions["1.0.0"].status, Status::Verified);
+        assert_eq!(result.packages["akeyless-pkg-b"].versions["2.0.0"].status, Status::Verified);
+    }
+
+    #[tokio::test]
+    async fn test_build_fetchurl_extracts_platform_hashes() {
+        use crate::matrix::test_helpers::{pending_version, pkg};
+
+        let mut p = pkg(Language::Go, Builder::Fetchurl);
+        let mut urls = BTreeMap::new();
+        urls.insert(
+            "x86_64-linux".to_string(),
+            "https://dl.example.com/{version}/bin-linux".to_string(),
+        );
+        urls.insert(
+            "aarch64-darwin".to_string(),
+            "https://dl.example.com/{version}/bin-darwin".to_string(),
+        );
+        p.platform_urls = Some(urls);
+        p.versions.insert("3.5.0".into(), pending_version("binrev"));
+
+        let mut packages = BTreeMap::new();
+        packages.insert("akeyless-cli".into(), p);
+        let matrix = Matrix { packages };
+        let store = InMemoryStore {
+            matrix: Mutex::new(matrix),
+        };
+
+        let runner = MockRunner {
+            responses: Mutex::new(vec![
+                CommandOutput {
+                    success: true,
+                    stdout: "hash1\n".into(),
+                    stderr: String::new(),
+                },
+                CommandOutput {
+                    success: true,
+                    stdout: "sha256-DarwinSri=\n".into(),
+                    stderr: String::new(),
+                },
+                CommandOutput {
+                    success: true,
+                    stdout: "hash2\n".into(),
+                    stderr: String::new(),
+                },
+                CommandOutput {
+                    success: true,
+                    stdout: "sha256-LinuxSri=\n".into(),
+                    stderr: String::new(),
+                },
+            ]),
+        };
+
+        run(
+            std::path::Path::new("fake.toml"),
+            Some("akeyless-cli"),
+            &runner,
+            &store,
+        )
+        .await
+        .unwrap();
+
+        let result = store.matrix.lock().unwrap();
+        let entry = &result.packages["akeyless-cli"].versions["3.5.0"];
+        assert_eq!(entry.status, Status::Verified);
+        assert!(entry.source_hash.is_none());
+        assert!(entry.hash_aarch64_darwin.is_some());
+        assert!(entry.hash_x86_64_linux.is_some());
+    }
 }

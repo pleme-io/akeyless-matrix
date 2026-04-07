@@ -111,4 +111,122 @@ mod tests {
         let state: WatchState = toml::from_str("# just a comment\n").unwrap();
         assert!(state.repos.is_empty());
     }
+
+    #[test]
+    fn test_file_watch_cache_save_and_load() {
+        let dir = std::env::temp_dir().join("watch-cache-roundtrip-test");
+        std::fs::create_dir_all(&dir).unwrap();
+        let cache_path = dir.join("watch-state.toml");
+
+        let cache = FileWatchCache {
+            path: cache_path.clone(),
+        };
+
+        let mut state = WatchState::default();
+        state.repos.insert(
+            "repo-a".to_string(),
+            RepoState {
+                head: "sha-aaa".to_string(),
+                latest_tag: Some("v1.2.3".to_string()),
+                language: Some("go".to_string()),
+            },
+        );
+        state.repos.insert(
+            "repo-b".to_string(),
+            RepoState {
+                head: "sha-bbb".to_string(),
+                latest_tag: None,
+                language: None,
+            },
+        );
+
+        cache.save(&state).unwrap();
+
+        let loaded = cache.load().unwrap();
+        assert_eq!(loaded.repos.len(), 2);
+        assert_eq!(loaded.repos["repo-a"].head, "sha-aaa");
+        assert_eq!(loaded.repos["repo-a"].latest_tag.as_deref(), Some("v1.2.3"));
+        assert_eq!(loaded.repos["repo-a"].language.as_deref(), Some("go"));
+        assert_eq!(loaded.repos["repo-b"].head, "sha-bbb");
+        assert!(loaded.repos["repo-b"].latest_tag.is_none());
+        assert!(loaded.repos["repo-b"].language.is_none());
+
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_file_watch_cache_load_empty_file() {
+        let dir = std::env::temp_dir().join("watch-cache-empty-test");
+        std::fs::create_dir_all(&dir).unwrap();
+        let cache_path = dir.join("watch-state.toml");
+        std::fs::write(&cache_path, "").unwrap();
+
+        let cache = FileWatchCache { path: cache_path };
+        let state = cache.load().unwrap();
+        assert!(state.repos.is_empty());
+
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_file_watch_cache_save_creates_parent_dirs() {
+        let dir = std::env::temp_dir().join("watch-cache-nested-test/sub/dir");
+        let cache_path = dir.join("watch-state.toml");
+
+        if dir.exists() {
+            std::fs::remove_dir_all(&dir).unwrap();
+        }
+
+        let cache = FileWatchCache {
+            path: cache_path.clone(),
+        };
+        let state = WatchState::default();
+        cache.save(&state).unwrap();
+
+        assert!(cache_path.exists());
+
+        std::fs::remove_dir_all(
+            std::env::temp_dir().join("watch-cache-nested-test"),
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn test_file_watch_cache_overwrite() {
+        let dir = std::env::temp_dir().join("watch-cache-overwrite-test");
+        std::fs::create_dir_all(&dir).unwrap();
+        let cache_path = dir.join("watch-state.toml");
+
+        let cache = FileWatchCache {
+            path: cache_path.clone(),
+        };
+
+        let mut state1 = WatchState::default();
+        state1.repos.insert(
+            "repo".to_string(),
+            RepoState {
+                head: "old-head".to_string(),
+                latest_tag: Some("v1.0.0".to_string()),
+                language: None,
+            },
+        );
+        cache.save(&state1).unwrap();
+
+        let mut state2 = WatchState::default();
+        state2.repos.insert(
+            "repo".to_string(),
+            RepoState {
+                head: "new-head".to_string(),
+                latest_tag: Some("v2.0.0".to_string()),
+                language: Some("rust".to_string()),
+            },
+        );
+        cache.save(&state2).unwrap();
+
+        let loaded = cache.load().unwrap();
+        assert_eq!(loaded.repos["repo"].head, "new-head");
+        assert_eq!(loaded.repos["repo"].latest_tag.as_deref(), Some("v2.0.0"));
+
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
 }
