@@ -13,6 +13,7 @@ use toml_edit::DocumentMut;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
+#[non_exhaustive]
 pub enum Status {
     Pending,
     Building,
@@ -33,6 +34,7 @@ impl fmt::Display for Status {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
+#[non_exhaustive]
 pub enum Language {
     Go,
     Rust,
@@ -63,6 +65,7 @@ impl fmt::Display for Language {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub enum Builder {
     #[serde(rename = "mkGoTool")]
     MkGoTool,
@@ -136,6 +139,7 @@ pub struct VersionEntry {
 /// How the watch daemon detects new versions for this package.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "lowercase")]
+#[non_exhaustive]
 pub enum TrackMode {
     /// Track semver tags (e.g., v1.0.0 → version "1.0.0"). Default.
     #[default]
