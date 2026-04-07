@@ -1325,18 +1325,7 @@ pub mod test_helpers {
     pub fn pending_version(rev: &str) -> VersionEntry {
         VersionEntry {
             rev: rev.into(),
-            source_hash: None,
-            vendor_hash: None,
-            cargo_hash: None,
-            npm_deps_hash: None,
-            maven_hash: None,
-            nuget_deps_hash: None,
-            status: Status::Pending,
-            verified_at: None,
-            hash_aarch64_darwin: None,
-            hash_x86_64_darwin: None,
-            hash_x86_64_linux: None,
-            hash_aarch64_linux: None,
+            ..VersionEntry::default()
         }
     }
 
@@ -1347,16 +1336,8 @@ pub mod test_helpers {
             rev: rev.into(),
             source_hash: Some(source.into()),
             vendor_hash: vendor.map(|s| s.into()),
-            cargo_hash: None,
-            npm_deps_hash: None,
-            maven_hash: None,
-            nuget_deps_hash: None,
             status: Status::Verified,
-            verified_at: None,
-            hash_aarch64_darwin: None,
-            hash_x86_64_darwin: None,
-            hash_x86_64_linux: None,
-            hash_aarch64_linux: None,
+            ..VersionEntry::default()
         }
     }
 }
