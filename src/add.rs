@@ -97,7 +97,7 @@ tier = 1
 description = "test"
 homepage = "https://example.com"
 "#;
-        Matrix::from_str(toml).unwrap()
+        crate::matrix::test_helpers::from_str(toml).unwrap()
     }
 
     #[test]

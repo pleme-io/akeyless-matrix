@@ -16,6 +16,9 @@ mod status;
 mod storage;
 mod verify;
 
+// TODO(scope): wire watch, watch_cache, git, provider modules into CLI
+// when the `watch` subcommand is implemented
+
 use crate::runner::SystemRunner;
 use crate::storage::{FsFileWriter, FsMatrixStore, MatrixStore};
 
@@ -110,7 +113,8 @@ async fn main() -> anyhow::Result<()> {
 
             let gen_start = std::time::Instant::now();
             generate::run(&matrix_path, None, &store, &writer)?;
-            let gen_duration = gen_start.elapsed().as_millis() as u64;
+            #[allow(clippy::cast_possible_truncation)]
+            let gen_duration = gen_start.elapsed().as_millis().min(u128::from(u64::MAX)) as u64;
 
             // Record certification with fingerprint and delta
             let current_matrix = store.load(&matrix_path)?;
@@ -118,7 +122,8 @@ async fn main() -> anyhow::Result<()> {
             let cert = certification::record(matrix_dir, &prev_matrix, &current_matrix)?;
             display::print_certification(&cert);
 
-            let total_duration = certify_start.elapsed().as_millis() as u64;
+            #[allow(clippy::cast_possible_truncation)]
+            let total_duration = certify_start.elapsed().as_millis().min(u128::from(u64::MAX)) as u64;
 
             // Audit: log generation and certification events
             let resource_count = current_matrix.packages.len();

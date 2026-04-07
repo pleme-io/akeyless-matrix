@@ -117,7 +117,7 @@ pub struct VersionEntry {
     /// Maven repository hash for Java/Maven packages
     #[serde(default)]
     pub maven_hash: Option<String>,
-    /// .NET NuGet dependencies hash for C#/.NET packages
+    /// .NET `NuGet` dependencies hash for C#/.NET packages
     #[serde(default)]
     pub nuget_deps_hash: Option<String>,
     pub status: Status,
@@ -202,11 +202,6 @@ pub struct Matrix {
 // ---------------------------------------------------------------------------
 
 impl Matrix {
-    /// Parse a Matrix from a TOML string (useful for testing).
-    pub fn from_str(content: &str) -> Result<Self> {
-        toml::from_str(content).context("parsing matrix TOML")
-    }
-
     /// Load and parse `matrix.toml` from the given path.
     pub fn load_from_path(path: &Path) -> Result<Self> {
         let content = std::fs::read_to_string(path)
@@ -252,18 +247,17 @@ impl Matrix {
             pkg_table["description"] = toml_edit::value(&pkg.description);
             pkg_table["homepage"] = toml_edit::value(&pkg.homepage);
 
-            // Optional fields
-            set_optional_string(pkg_table, "license", &pkg.license);
-            set_optional_string(pkg_table, "fork_of", &pkg.fork_of);
-            set_optional_string(pkg_table, "fork_reason", &pkg.fork_reason);
-            set_optional_string(pkg_table, "pname_override", &pkg.pname_override);
-            set_optional_string(pkg_table, "extra_post_install", &pkg.extra_post_install);
+            set_optional_string(pkg_table, "license", pkg.license.as_ref());
+            set_optional_string(pkg_table, "fork_of", pkg.fork_of.as_ref());
+            set_optional_string(pkg_table, "fork_reason", pkg.fork_reason.as_ref());
+            set_optional_string(pkg_table, "pname_override", pkg.pname_override.as_ref());
+            set_optional_string(pkg_table, "extra_post_install", pkg.extra_post_install.as_ref());
             set_optional_bool(pkg_table, "proxy_vendor", pkg.proxy_vendor);
             set_optional_bool(pkg_table, "dont_npm_build", pkg.dont_npm_build);
-            set_optional_string(pkg_table, "binary_name", &pkg.binary_name);
-            set_optional_vec(pkg_table, "sub_packages", &pkg.sub_packages);
-            set_optional_vec(pkg_table, "native_build_inputs", &pkg.native_build_inputs);
-            set_optional_vec(pkg_table, "python_deps", &pkg.python_deps);
+            set_optional_string(pkg_table, "binary_name", pkg.binary_name.as_ref());
+            set_optional_vec(pkg_table, "sub_packages", pkg.sub_packages.as_ref());
+            set_optional_vec(pkg_table, "native_build_inputs", pkg.native_build_inputs.as_ref());
+            set_optional_vec(pkg_table, "python_deps", pkg.python_deps.as_ref());
 
             // platform_urls sub-table
             if let Some(ref urls) = pkg.platform_urls {
@@ -345,7 +339,7 @@ impl Matrix {
         pkg.versions
             .iter()
             .filter(|(_, v)| v.status == Status::Verified)
-            .last()
+            .next_back()
             .map(|(k, v)| (k.as_str(), v))
     }
 
@@ -360,7 +354,7 @@ impl Matrix {
     }
 
     /// Sanitize a version string for use in Nix attribute names.
-    /// "0.6.1" -> "0_6_1", "0.1.0-pleme.1" -> "0_1_0-pleme_1"
+    /// `"0.6.1"` -> `"0_6_1"`, `"0.1.0-pleme.1"` -> `"0_1_0-pleme_1"`
     #[must_use]
     pub fn sanitize_version(version: &str) -> String {
         version.replace('.', "_")
@@ -384,7 +378,7 @@ impl Matrix {
 fn set_optional_string(
     table: &mut toml_edit::Table,
     key: &str,
-    value: &Option<String>,
+    value: Option<&String>,
 ) {
     if let Some(v) = value {
         table[key] = toml_edit::value(v.as_str());
@@ -404,7 +398,7 @@ fn set_optional_bool(
 fn set_optional_vec(
     table: &mut toml_edit::Table,
     key: &str,
-    value: &Option<Vec<String>>,
+    value: Option<&Vec<String>>,
 ) {
     if let Some(items) = value {
         let mut arr = toml_edit::Array::new();
@@ -448,7 +442,7 @@ source_hash = "sha256-test"
 vendor_hash = "sha256-vendor"
 status = "verified"
 "#;
-        let matrix = Matrix::from_str(toml).unwrap();
+        let matrix = test_helpers::from_str(toml).unwrap();
         assert_eq!(matrix.packages.len(), 1);
         let pkg = &matrix.packages["akeyless-test"];
         assert_eq!(pkg.owner, "test-org");
@@ -804,7 +798,7 @@ tier = 3
 description = "d"
 homepage = "h"
 "#;
-        let matrix = Matrix::from_str(toml).unwrap();
+        let matrix = test_helpers::from_str(toml).unwrap();
         assert_eq!(matrix.packages.len(), 7);
         assert_eq!(matrix.packages["test-go"].language, Language::Go);
         assert_eq!(matrix.packages["test-rust"].language, Language::Rust);
@@ -835,7 +829,7 @@ extra_post_install = "echo done"
 track = "commits"
 unstable_base = "0.1.0"
 "#;
-        let matrix = Matrix::from_str(toml).unwrap();
+        let matrix = test_helpers::from_str(toml).unwrap();
         let pkg = &matrix.packages["akeyless-test"];
         assert_eq!(pkg.license.as_deref(), Some("MIT"));
         assert_eq!(pkg.fork_of.as_deref(), Some("upstream/repo"));
@@ -875,7 +869,7 @@ hash_x86_64_darwin = "sha256-x86-darwin"
 hash_x86_64_linux = "sha256-x86-linux"
 hash_aarch64_linux = "sha256-arm-linux"
 "#;
-        let matrix = Matrix::from_str(toml).unwrap();
+        let matrix = test_helpers::from_str(toml).unwrap();
         let entry = &matrix.packages["akeyless-test"].versions["1.0.0"];
         assert_eq!(entry.source_hash.as_deref(), Some("sha256-src"));
         assert_eq!(entry.vendor_hash.as_deref(), Some("sha256-vendor"));
@@ -892,7 +886,7 @@ hash_aarch64_linux = "sha256-arm-linux"
     #[test]
     fn test_from_str_invalid_toml() {
         let bad_toml = "not valid [ toml }{";
-        let result = Matrix::from_str(bad_toml);
+        let result = test_helpers::from_str(bad_toml);
         assert!(result.is_err());
     }
 
@@ -1076,6 +1070,11 @@ hash_aarch64_linux = "sha256-arm-linux"
 #[cfg(test)]
 pub mod test_helpers {
     use super::*;
+
+    /// Parse a [`Matrix`] from a TOML string.
+    pub fn from_str(content: &str) -> anyhow::Result<Matrix> {
+        toml::from_str(content).context("parsing matrix TOML")
+    }
 
     /// Create a minimal Package with sensible defaults. Override fields as needed.
     #[must_use]

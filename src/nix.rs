@@ -158,7 +158,7 @@ pub fn generate_go_builds(matrix: &Matrix) -> String {
                 let base_key = Matrix::source_key(pkg_name);
                 let is_latest = latest.is_some_and(|(lv, _)| lv == *ver);
                 let (attr_name, src_key) = if is_latest {
-                    (pkg_name.to_string(), base_key.clone())
+                    ((*pkg_name).to_string(), base_key.clone())
                 } else {
                     let san = Matrix::sanitize_version(ver);
                     (format!("{pkg_name}-{san}"), format!("{base_key}-{san}"))
