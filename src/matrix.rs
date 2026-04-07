@@ -266,7 +266,7 @@ impl Matrix {
                 }
                 let urls_table = pkg_table["platform_urls"]
                     .as_table_mut()
-                    .unwrap();
+                    .with_context(|| format!("{pkg_name}.platform_urls is not a table"))?;
                 for (platform, url) in urls {
                     urls_table[platform.as_str()] = toml_edit::value(url.as_str());
                 }
