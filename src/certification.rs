@@ -122,10 +122,10 @@ pub fn compute_delta(
 
     // Find packages whose latest version changed
     for (key, curr_ver) in &curr_latest {
-        if let Some(prev_ver) = prev_latest.get(key) {
-            if prev_ver != curr_ver {
-                updated.push(format!("{key}: {prev_ver} -> {curr_ver}"));
-            }
+        if let Some(prev_ver) = prev_latest.get(key)
+            && prev_ver != curr_ver
+        {
+            updated.push(format!("{key}: {prev_ver} -> {curr_ver}"));
         }
     }
 
@@ -226,6 +226,7 @@ pub fn record(
 
 /// Simple SHA-256 using manual computation (no external crate needed).
 /// Uses the standard FIPS 180-4 algorithm.
+#[allow(clippy::many_single_char_names)]
 fn sha256_hex(input: &str) -> String {
     // Initial hash values (first 32 bits of fractional parts of square roots of first 8 primes)
     let mut h: [u32; 8] = [

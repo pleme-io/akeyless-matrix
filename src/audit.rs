@@ -37,12 +37,6 @@ impl AuditLog {
         Self::new(dir.join("audit.jsonl"))
     }
 
-    /// Return the path of the audit log file.
-    #[must_use]
-    pub fn path(&self) -> &std::path::Path {
-        &self.path
-    }
-
     /// Log an event. Appends a single JSON line.
     pub fn log(&self, event: &str, data: serde_json::Value) {
         let entry = AuditEvent {
@@ -50,15 +44,53 @@ impl AuditLog {
             event: event.to_string(),
             data,
         };
-        if let Ok(line) = serde_json::to_string(&entry) {
-            if let Ok(mut file) = OpenOptions::new()
+        if let Ok(line) = serde_json::to_string(&entry)
+            && let Ok(mut file) = OpenOptions::new()
                 .create(true)
                 .append(true)
                 .open(&self.path)
-            {
-                let _ = writeln!(file, "{line}");
-            }
+        {
+            let _ = writeln!(file, "{line}");
         }
+    }
+
+    /// Log a certify completion event.
+    pub fn certify_complete(&self, package: &str, version: &str, status: &str, duration_ms: u64) {
+        self.log(
+            "certify_complete",
+            serde_json::json!({
+                "package": package,
+                "version": version,
+                "status": status,
+                "duration_ms": duration_ms,
+            }),
+        );
+    }
+
+    /// Log a generation complete event.
+    pub fn generation_complete(&self, backend: &str, resources: usize, artifacts: usize, duration_ms: u64) {
+        self.log(
+            "generation_complete",
+            serde_json::json!({
+                "backend": backend,
+                "resources": resources,
+                "artifacts": artifacts,
+                "duration_ms": duration_ms,
+            }),
+        );
+    }
+
+}
+
+// Methods used by the watch module and tests but not yet wired into the CLI.
+// TODO(scope): move these back to the main impl block when the `watch`
+// subcommand is wired into main.rs.
+#[cfg(test)]
+impl AuditLog {
+    /// Return the path of the audit log file.
+    #[must_use]
+    pub fn path(&self) -> &std::path::Path {
+        &self.path
     }
 
     /// Log a version detection event.
@@ -90,32 +122,6 @@ impl AuditLog {
                 "package": package,
                 "version": version,
                 "status": status,
-            }),
-        );
-    }
-
-    /// Log a certify completion event.
-    pub fn certify_complete(&self, package: &str, version: &str, status: &str, duration_ms: u64) {
-        self.log(
-            "certify_complete",
-            serde_json::json!({
-                "package": package,
-                "version": version,
-                "status": status,
-                "duration_ms": duration_ms,
-            }),
-        );
-    }
-
-    /// Log a generation complete event.
-    pub fn generation_complete(&self, backend: &str, resources: usize, artifacts: usize, duration_ms: u64) {
-        self.log(
-            "generation_complete",
-            serde_json::json!({
-                "backend": backend,
-                "resources": resources,
-                "artifacts": artifacts,
-                "duration_ms": duration_ms,
             }),
         );
     }

@@ -37,7 +37,7 @@ pub fn print_status_table(matrix: &Matrix) {
 
         let status_str = format_status(status);
 
-        println!("  {:<32} {:<20} {:<12} {}", name, version, status_str, date);
+        println!("  {name:<32} {version:<20} {status_str:<12} {date}");
     }
 
     // Summary counts

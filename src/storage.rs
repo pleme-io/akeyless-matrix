@@ -13,7 +13,7 @@ pub trait MatrixStore {
     fn save(&self, path: &Path, matrix: &Matrix) -> Result<()>;
 }
 
-/// Real implementation backed by the filesystem using toml/toml_edit.
+/// Real implementation backed by the filesystem using `toml`/`toml_edit`.
 pub struct FsMatrixStore;
 
 impl MatrixStore for FsMatrixStore {
