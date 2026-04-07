@@ -115,4 +115,194 @@ error: hash mismatch in fixed-output derivation '/nix/store/xxx':
             Some("sha256-e6JhyI7E1OYHHOx1Z6fSjxaMocsHmzSeBs+iOZ3dyCE=")
         );
     }
+
+    #[test]
+    fn test_extract_hash_from_stderr_no_match() {
+        assert!(extract_hash_from_stderr("all good, no errors").is_none());
+    }
+
+    #[test]
+    fn test_extract_hash_from_stderr_empty() {
+        assert!(extract_hash_from_stderr("").is_none());
+    }
+
+    #[test]
+    fn test_extract_hash_from_prefetch_sha256_key() {
+        let output = r#"{ sha256 = "sha256-TestHash123="; }"#;
+        let hash = extract_hash_from_prefetch(output);
+        assert_eq!(hash.as_deref(), Some("sha256-TestHash123="));
+    }
+
+    #[test]
+    fn test_extract_hash_from_prefetch_no_hash() {
+        let output = r#"{ owner = "akeylesslabs"; repo = "cli"; }"#;
+        let hash = extract_hash_from_prefetch(output);
+        assert!(hash.is_none());
+    }
+
+    #[test]
+    fn test_extract_hash_from_stderr_multiple_got_lines() {
+        let stderr = "got:    sha256-FirstHash=\ngot:    sha256-SecondHash=\n";
+        let hash = extract_hash_from_stderr(stderr);
+        assert_eq!(hash.as_deref(), Some("sha256-FirstHash="));
+    }
+
+    #[test]
+    fn test_dummy_hash_is_valid_sri() {
+        assert!(DUMMY_HASH.starts_with("sha256-"));
+        assert!(DUMMY_HASH.ends_with('='));
+    }
+
+    use crate::runner::CommandOutput;
+    use std::sync::Mutex;
+
+    struct MockRunner {
+        responses: Mutex<Vec<CommandOutput>>,
+    }
+
+    #[async_trait::async_trait]
+    impl crate::runner::CommandRunner for MockRunner {
+        async fn run(&self, _program: &str, _args: &[&str]) -> anyhow::Result<CommandOutput> {
+            let mut responses = self.responses.lock().unwrap();
+            if responses.is_empty() {
+                anyhow::bail!("no more mock responses");
+            }
+            Ok(responses.remove(0))
+        }
+    }
+
+    #[tokio::test]
+    async fn test_prefetch_github_success() {
+        let runner = MockRunner {
+            responses: Mutex::new(vec![CommandOutput {
+                success: true,
+                stdout: r#"{ hash = "sha256-ResultHash="; }"#.into(),
+                stderr: String::new(),
+            }]),
+        };
+
+        let hash = prefetch_github(&runner, "testorg", "testrepo", "abc123")
+            .await
+            .unwrap();
+        assert_eq!(hash, "sha256-ResultHash=");
+    }
+
+    #[tokio::test]
+    async fn test_prefetch_github_failure() {
+        let runner = MockRunner {
+            responses: Mutex::new(vec![CommandOutput {
+                success: false,
+                stdout: String::new(),
+                stderr: "fatal: repository not found".into(),
+            }]),
+        };
+
+        let result = prefetch_github(&runner, "testorg", "testrepo", "abc123").await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("nix-prefetch-github failed"));
+    }
+
+    #[tokio::test]
+    async fn test_prefetch_github_no_hash_in_output() {
+        let runner = MockRunner {
+            responses: Mutex::new(vec![CommandOutput {
+                success: true,
+                stdout: "{ no-hash-here = true; }".into(),
+                stderr: String::new(),
+            }]),
+        };
+
+        let result = prefetch_github(&runner, "testorg", "testrepo", "abc123").await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("extracting hash"));
+    }
+
+    #[tokio::test]
+    async fn test_nix_build_expr_success() {
+        let runner = MockRunner {
+            responses: Mutex::new(vec![CommandOutput {
+                success: true,
+                stdout: "/nix/store/xxx-result".into(),
+                stderr: String::new(),
+            }]),
+        };
+
+        let (success, stdout, stderr) = nix_build_expr(&runner, "some nix expr").await.unwrap();
+        assert!(success);
+        assert!(stdout.contains("result"));
+        assert!(stderr.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_nix_build_expr_failure() {
+        let runner = MockRunner {
+            responses: Mutex::new(vec![CommandOutput {
+                success: false,
+                stdout: String::new(),
+                stderr: "error: hash mismatch\ngot:    sha256-RealHash=\n".into(),
+            }]),
+        };
+
+        let (success, _stdout, stderr) = nix_build_expr(&runner, "some nix expr").await.unwrap();
+        assert!(!success);
+        assert!(stderr.contains("hash mismatch"));
+    }
+
+    #[tokio::test]
+    async fn test_prefetch_url_success() {
+        let runner = MockRunner {
+            responses: Mutex::new(vec![
+                CommandOutput {
+                    success: true,
+                    stdout: "0abc123def456\n".into(),
+                    stderr: String::new(),
+                },
+                CommandOutput {
+                    success: true,
+                    stdout: "sha256-ConvertedSriHash=\n".into(),
+                    stderr: String::new(),
+                },
+            ]),
+        };
+
+        let hash = prefetch_url(&runner, "https://example.com/bin").await.unwrap();
+        assert_eq!(hash, "sha256-ConvertedSriHash=");
+    }
+
+    #[tokio::test]
+    async fn test_prefetch_url_first_step_fails() {
+        let runner = MockRunner {
+            responses: Mutex::new(vec![CommandOutput {
+                success: false,
+                stdout: String::new(),
+                stderr: "404 not found".into(),
+            }]),
+        };
+
+        let result = prefetch_url(&runner, "https://example.com/nonexistent").await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("nix-prefetch-url failed"));
+    }
+
+    #[tokio::test]
+    async fn test_prefetch_url_sri_conversion_fails() {
+        let runner = MockRunner {
+            responses: Mutex::new(vec![
+                CommandOutput {
+                    success: true,
+                    stdout: "0abc123\n".into(),
+                    stderr: String::new(),
+                },
+                CommandOutput {
+                    success: false,
+                    stdout: String::new(),
+                    stderr: "invalid hash".into(),
+                },
+            ]),
+        };
+
+        let result = prefetch_url(&runner, "https://example.com/bin").await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("nix hash to-sri failed"));
+    }
 }
