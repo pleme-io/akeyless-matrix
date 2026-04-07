@@ -344,17 +344,18 @@ impl Matrix {
             pkg_table["description"] = toml_edit::value(&pkg.description);
             pkg_table["homepage"] = toml_edit::value(&pkg.homepage);
 
-            set_optional_string(pkg_table, "license", pkg.license.as_ref());
-            set_optional_string(pkg_table, "fork_of", pkg.fork_of.as_ref());
-            set_optional_string(pkg_table, "fork_reason", pkg.fork_reason.as_ref());
-            set_optional_string(pkg_table, "pname_override", pkg.pname_override.as_ref());
-            set_optional_string(pkg_table, "extra_post_install", pkg.extra_post_install.as_ref());
+            // Optional fields
+            set_optional_string(pkg_table, "license", pkg.license.as_deref());
+            set_optional_string(pkg_table, "fork_of", pkg.fork_of.as_deref());
+            set_optional_string(pkg_table, "fork_reason", pkg.fork_reason.as_deref());
+            set_optional_string(pkg_table, "pname_override", pkg.pname_override.as_deref());
+            set_optional_string(pkg_table, "extra_post_install", pkg.extra_post_install.as_deref());
             set_optional_bool(pkg_table, "proxy_vendor", pkg.proxy_vendor);
             set_optional_bool(pkg_table, "dont_npm_build", pkg.dont_npm_build);
-            set_optional_string(pkg_table, "binary_name", pkg.binary_name.as_ref());
-            set_optional_vec(pkg_table, "sub_packages", pkg.sub_packages.as_ref());
-            set_optional_vec(pkg_table, "native_build_inputs", pkg.native_build_inputs.as_ref());
-            set_optional_vec(pkg_table, "python_deps", pkg.python_deps.as_ref());
+            set_optional_string(pkg_table, "binary_name", pkg.binary_name.as_deref());
+            set_optional_vec(pkg_table, "sub_packages", pkg.sub_packages.as_deref());
+            set_optional_vec(pkg_table, "native_build_inputs", pkg.native_build_inputs.as_deref());
+            set_optional_vec(pkg_table, "python_deps", pkg.python_deps.as_deref());
 
             // platform_urls sub-table
             if let Some(ref urls) = pkg.platform_urls {
@@ -435,8 +436,8 @@ impl Matrix {
     pub fn latest_verified(pkg: &Package) -> Option<(&str, &VersionEntry)> {
         pkg.versions
             .iter()
-            .filter(|(_, v)| v.status == Status::Verified)
-            .next_back()
+            .rev()
+            .find(|(_, v)| v.status == Status::Verified)
             .map(|(k, v)| (k.as_str(), v))
     }
 
@@ -475,10 +476,10 @@ impl Matrix {
 fn set_optional_string(
     table: &mut toml_edit::Table,
     key: &str,
-    value: Option<&String>,
+    value: Option<&str>,
 ) {
     if let Some(v) = value {
-        table[key] = toml_edit::value(v.as_str());
+        table[key] = toml_edit::value(v);
     }
 }
 
@@ -495,7 +496,7 @@ fn set_optional_bool(
 fn set_optional_vec(
     table: &mut toml_edit::Table,
     key: &str,
-    value: Option<&Vec<String>>,
+    value: Option<&[String]>,
 ) {
     if let Some(items) = value {
         let mut arr = toml_edit::Array::new();

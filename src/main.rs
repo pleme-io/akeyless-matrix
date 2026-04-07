@@ -113,8 +113,7 @@ async fn main() -> anyhow::Result<()> {
 
             let gen_start = std::time::Instant::now();
             generate::run(&matrix_path, None, &store, &writer)?;
-            #[allow(clippy::cast_possible_truncation)]
-            let gen_duration = gen_start.elapsed().as_millis().min(u128::from(u64::MAX)) as u64;
+            let gen_duration = u64::try_from(gen_start.elapsed().as_millis()).unwrap_or(u64::MAX);
 
             // Record certification with fingerprint and delta
             let current_matrix = store.load(&matrix_path)?;
@@ -122,8 +121,7 @@ async fn main() -> anyhow::Result<()> {
             let cert = certification::record(matrix_dir, &prev_matrix, &current_matrix)?;
             display::print_certification(&cert);
 
-            #[allow(clippy::cast_possible_truncation)]
-            let total_duration = certify_start.elapsed().as_millis().min(u128::from(u64::MAX)) as u64;
+            let total_duration = u64::try_from(certify_start.elapsed().as_millis()).unwrap_or(u64::MAX);
 
             // Audit: log generation and certification events
             let resource_count = current_matrix.packages.len();
