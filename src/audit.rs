@@ -19,6 +19,7 @@ pub struct AuditLog {
 }
 
 impl AuditLog {
+    #[must_use]
     pub fn new(path: PathBuf) -> Self {
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent).ok();
