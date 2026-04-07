@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 use std::fmt;
 use std::path::Path;
+use std::str::FromStr;
 
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
@@ -28,6 +29,20 @@ impl fmt::Display for Status {
             Self::Building => write!(f, "building"),
             Self::Verified => write!(f, "verified"),
             Self::Broken => write!(f, "broken"),
+        }
+    }
+}
+
+impl FromStr for Status {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self> {
+        match s {
+            "pending" => Ok(Self::Pending),
+            "building" => Ok(Self::Building),
+            "verified" => Ok(Self::Verified),
+            "broken" => Ok(Self::Broken),
+            other => Err(anyhow::anyhow!("unknown status: {other}")),
         }
     }
 }
@@ -60,6 +75,25 @@ impl fmt::Display for Language {
             Self::Php => write!(f, "php"),
             Self::Csharp => write!(f, "csharp"),
             Self::Helm => write!(f, "helm"),
+        }
+    }
+}
+
+impl FromStr for Language {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self> {
+        match s {
+            "go" => Ok(Self::Go),
+            "rust" => Ok(Self::Rust),
+            "python" => Ok(Self::Python),
+            "typescript" => Ok(Self::TypeScript),
+            "java" => Ok(Self::Java),
+            "ruby" => Ok(Self::Ruby),
+            "php" => Ok(Self::Php),
+            "csharp" => Ok(Self::Csharp),
+            "helm" => Ok(Self::Helm),
+            other => Err(anyhow::anyhow!("unknown language: {other}")),
         }
     }
 }
@@ -102,6 +136,49 @@ impl fmt::Display for Builder {
             Self::MkDotnetPackage => write!(f, "mkDotnetPackage"),
             Self::MkTerraformModuleCheck => write!(f, "mkTerraformModuleCheck"),
             Self::None => write!(f, "none"),
+        }
+    }
+}
+
+impl FromStr for Builder {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self> {
+        match s {
+            "mkGoTool" => Ok(Self::MkGoTool),
+            "mkGoLibraryCheck" => Ok(Self::MkGoLibraryCheck),
+            "buildRustPackage" => Ok(Self::BuildRustPackage),
+            "mkPythonPackage" => Ok(Self::MkPythonPackage),
+            "buildNpmPackage" => Ok(Self::BuildNpmPackage),
+            "fetchurl" => Ok(Self::Fetchurl),
+            "mkJavaMavenPackage" => Ok(Self::MkJavaMavenPackage),
+            "mkDotnetPackage" => Ok(Self::MkDotnetPackage),
+            "mkTerraformModuleCheck" => Ok(Self::MkTerraformModuleCheck),
+            "none" => Ok(Self::None),
+            other => Err(anyhow::anyhow!("unknown builder: {other}")),
+        }
+    }
+}
+
+impl fmt::Display for TrackMode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Tags => write!(f, "tags"),
+            Self::Commits => write!(f, "commits"),
+            Self::Binary => write!(f, "binary"),
+        }
+    }
+}
+
+impl FromStr for TrackMode {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self> {
+        match s {
+            "tags" => Ok(Self::Tags),
+            "commits" => Ok(Self::Commits),
+            "binary" => Ok(Self::Binary),
+            other => Err(anyhow::anyhow!("unknown track mode: {other}")),
         }
     }
 }
@@ -674,6 +751,49 @@ status = "verified"
         assert_eq!(Builder::MkDotnetPackage.to_string(), "mkDotnetPackage");
         assert_eq!(Builder::MkTerraformModuleCheck.to_string(), "mkTerraformModuleCheck");
         assert_eq!(Builder::None.to_string(), "none");
+    }
+
+    #[test]
+    fn test_status_fromstr_roundtrip() {
+        for s in &[Status::Pending, Status::Building, Status::Verified, Status::Broken] {
+            let parsed: Status = s.to_string().parse().unwrap();
+            assert_eq!(*s, parsed);
+        }
+        assert!("invalid".parse::<Status>().is_err());
+    }
+
+    #[test]
+    fn test_language_fromstr_roundtrip() {
+        for l in &[
+            Language::Go, Language::Rust, Language::Python, Language::TypeScript,
+            Language::Java, Language::Ruby, Language::Php, Language::Csharp, Language::Helm,
+        ] {
+            let parsed: Language = l.to_string().parse().unwrap();
+            assert_eq!(*l, parsed);
+        }
+        assert!("invalid".parse::<Language>().is_err());
+    }
+
+    #[test]
+    fn test_builder_fromstr_roundtrip() {
+        for b in &[
+            Builder::MkGoTool, Builder::MkGoLibraryCheck, Builder::BuildRustPackage,
+            Builder::MkPythonPackage, Builder::BuildNpmPackage, Builder::Fetchurl,
+            Builder::MkJavaMavenPackage, Builder::MkDotnetPackage,
+            Builder::MkTerraformModuleCheck, Builder::None,
+        ] {
+            let parsed: Builder = b.to_string().parse().unwrap();
+            assert_eq!(*b, parsed);
+        }
+        assert!("invalid".parse::<Builder>().is_err());
+    }
+
+    #[test]
+    fn test_track_mode_display_fromstr_roundtrip() {
+        for t in &[TrackMode::Tags, TrackMode::Commits, TrackMode::Binary] {
+            assert_eq!(*t, t.to_string().parse::<TrackMode>().unwrap());
+        }
+        assert!("invalid".parse::<TrackMode>().is_err());
     }
 
     #[test]
