@@ -1194,6 +1194,40 @@ hash_aarch64_linux = "sha256-arm-linux"
 #[cfg(test)]
 pub mod test_helpers {
     use super::*;
+    use crate::runner::CommandOutput;
+    use crate::storage::MatrixStore;
+    use std::sync::Mutex;
+
+    /// Mock command runner that returns predetermined responses in FIFO order.
+    pub struct MockRunner {
+        pub responses: Mutex<Vec<CommandOutput>>,
+    }
+
+    #[async_trait::async_trait]
+    impl crate::runner::CommandRunner for MockRunner {
+        async fn run(&self, _program: &str, _args: &[&str]) -> anyhow::Result<CommandOutput> {
+            let mut responses = self.responses.lock().unwrap();
+            if responses.is_empty() {
+                anyhow::bail!("no more mock responses");
+            }
+            Ok(responses.remove(0))
+        }
+    }
+
+    /// In-memory matrix store for testing, backed by a `Mutex<Matrix>`.
+    pub struct InMemoryStore {
+        pub matrix: Mutex<Matrix>,
+    }
+
+    impl MatrixStore for InMemoryStore {
+        fn load(&self, _path: &std::path::Path) -> anyhow::Result<Matrix> {
+            Ok(self.matrix.lock().unwrap().clone())
+        }
+        fn save(&self, _path: &std::path::Path, matrix: &Matrix) -> anyhow::Result<()> {
+            *self.matrix.lock().unwrap() = matrix.clone();
+            Ok(())
+        }
+    }
 
     /// Parse a [`Matrix`] from a TOML string.
     pub fn from_str(content: &str) -> anyhow::Result<Matrix> {
