@@ -6,6 +6,7 @@
 use crate::matrix::Package;
 
 /// Generate a Go build expression.
+#[must_use]
 pub fn go_expr(
     pkg: &Package,
     rev: &str,
@@ -51,6 +52,7 @@ pub fn go_expr(
 }
 
 /// Generate a Rust build expression.
+#[must_use]
 pub fn rust_expr(
     pkg: &Package,
     rev: &str,
@@ -92,6 +94,7 @@ pub fn rust_expr(
 }
 
 /// Generate a TypeScript/npm build expression.
+#[must_use]
 pub fn typescript_expr(
     pkg: &Package,
     rev: &str,
@@ -127,6 +130,7 @@ pub fn typescript_expr(
 }
 
 /// Generate a Python build expression.
+#[must_use]
 pub fn python_expr(
     pkg: &Package,
     rev: &str,

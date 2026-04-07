@@ -39,6 +39,7 @@ fn extract_hash_from_prefetch(output: &str) -> Option<String> {
 
 /// Extract the real hash from Nix build stderr when a hash mismatch occurs.
 /// Nix prints something like: `got:    sha256-RealHashHere=`
+#[must_use]
 pub fn extract_hash_from_stderr(stderr: &str) -> Option<String> {
     let re = Regex::new(r"got:\s+(sha256-[A-Za-z0-9+/=]+)").ok()?;
     re.captures(stderr)
