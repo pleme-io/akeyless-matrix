@@ -468,4 +468,268 @@ mod tests {
         let result = verify_entry(&pkg, &entry, &runner).await;
         assert!(result.is_ok());
     }
+
+    fn make_rust_entry(source_hash: &str, cargo_hash: &str) -> VersionEntry {
+        VersionEntry {
+            rev: "rustrev".into(),
+            source_hash: Some(source_hash.into()),
+            vendor_hash: None,
+            cargo_hash: Some(cargo_hash.into()),
+            npm_deps_hash: None,
+            maven_hash: None,
+            nuget_deps_hash: None,
+            status: Status::Verified,
+            verified_at: None,
+            hash_aarch64_darwin: None,
+            hash_x86_64_darwin: None,
+            hash_x86_64_linux: None,
+            hash_aarch64_linux: None,
+        }
+    }
+
+    #[tokio::test]
+    async fn test_verify_rust_package_success() {
+        let mut versions = BTreeMap::new();
+        versions.insert("0.3.0".into(), make_rust_entry("sha256-src", "sha256-cargo"));
+        let mut packages = BTreeMap::new();
+        packages.insert(
+            "akeyless-rust-tool".to_string(),
+            Package {
+                owner: "testorg".into(),
+                repo: "rust-tool".into(),
+                language: Language::Rust,
+                builder: Builder::BuildRustPackage,
+                tier: 2,
+                sub_packages: None,
+                proxy_vendor: None,
+                license: None,
+                description: "t".into(),
+                homepage: "t".into(),
+                fork_of: None,
+                fork_reason: None,
+                native_build_inputs: None,
+                python_deps: None,
+                pname_override: None,
+                dont_npm_build: None,
+                extra_post_install: None,
+                binary_name: None,
+                platform_urls: None,
+                track: crate::matrix::TrackMode::default(),
+                unstable_base: None,
+                versions,
+            },
+        );
+        let matrix = Matrix { packages };
+        let store = InMemoryStore {
+            matrix: Mutex::new(matrix),
+        };
+
+        let runner = MockRunner {
+            responses: Mutex::new(vec![CommandOutput {
+                success: true,
+                stdout: String::new(),
+                stderr: String::new(),
+            }]),
+        };
+
+        run(std::path::Path::new("fake.toml"), &runner, &store)
+            .await
+            .unwrap();
+
+        let result = store.matrix.lock().unwrap();
+        let entry = &result.packages["akeyless-rust-tool"].versions["0.3.0"];
+        assert_eq!(entry.status, Status::Verified);
+        assert!(entry.verified_at.is_some());
+    }
+
+    #[tokio::test]
+    async fn test_verify_typescript_package_success() {
+        let mut versions = BTreeMap::new();
+        versions.insert(
+            "2.0.0".to_string(),
+            VersionEntry {
+                rev: "tsrev".into(),
+                source_hash: Some("sha256-tssrc".into()),
+                vendor_hash: None,
+                cargo_hash: None,
+                npm_deps_hash: Some("sha256-npmdeps".into()),
+                maven_hash: None,
+                nuget_deps_hash: None,
+                status: Status::Verified,
+                verified_at: None,
+                hash_aarch64_darwin: None,
+                hash_x86_64_darwin: None,
+                hash_x86_64_linux: None,
+                hash_aarch64_linux: None,
+            },
+        );
+        let mut packages = BTreeMap::new();
+        packages.insert(
+            "akeyless-ts-sdk".to_string(),
+            Package {
+                owner: "testorg".into(),
+                repo: "ts-sdk".into(),
+                language: Language::TypeScript,
+                builder: Builder::BuildNpmPackage,
+                tier: 2,
+                sub_packages: None,
+                proxy_vendor: None,
+                license: None,
+                description: "t".into(),
+                homepage: "t".into(),
+                fork_of: None,
+                fork_reason: None,
+                native_build_inputs: None,
+                python_deps: None,
+                pname_override: None,
+                dont_npm_build: None,
+                extra_post_install: None,
+                binary_name: None,
+                platform_urls: None,
+                track: crate::matrix::TrackMode::default(),
+                unstable_base: None,
+                versions,
+            },
+        );
+        let matrix = Matrix { packages };
+        let store = InMemoryStore {
+            matrix: Mutex::new(matrix),
+        };
+
+        let runner = MockRunner {
+            responses: Mutex::new(vec![CommandOutput {
+                success: true,
+                stdout: String::new(),
+                stderr: String::new(),
+            }]),
+        };
+
+        run(std::path::Path::new("fake.toml"), &runner, &store)
+            .await
+            .unwrap();
+
+        let result = store.matrix.lock().unwrap();
+        let entry = &result.packages["akeyless-ts-sdk"].versions["2.0.0"];
+        assert_eq!(entry.status, Status::Verified);
+    }
+
+    #[tokio::test]
+    async fn test_verify_python_package_success() {
+        let mut versions = BTreeMap::new();
+        versions.insert(
+            "5.0.0".to_string(),
+            VersionEntry {
+                rev: "pyrev".into(),
+                source_hash: Some("sha256-pysrc".into()),
+                vendor_hash: None,
+                cargo_hash: None,
+                npm_deps_hash: None,
+                maven_hash: None,
+                nuget_deps_hash: None,
+                status: Status::Verified,
+                verified_at: None,
+                hash_aarch64_darwin: None,
+                hash_x86_64_darwin: None,
+                hash_x86_64_linux: None,
+                hash_aarch64_linux: None,
+            },
+        );
+        let mut packages = BTreeMap::new();
+        packages.insert(
+            "akeyless-python-sdk".to_string(),
+            Package {
+                owner: "testorg".into(),
+                repo: "python-sdk".into(),
+                language: Language::Python,
+                builder: Builder::MkPythonPackage,
+                tier: 3,
+                sub_packages: None,
+                proxy_vendor: None,
+                license: None,
+                description: "t".into(),
+                homepage: "t".into(),
+                fork_of: None,
+                fork_reason: None,
+                native_build_inputs: None,
+                python_deps: None,
+                pname_override: None,
+                dont_npm_build: None,
+                extra_post_install: None,
+                binary_name: None,
+                platform_urls: None,
+                track: crate::matrix::TrackMode::default(),
+                unstable_base: None,
+                versions,
+            },
+        );
+        let matrix = Matrix { packages };
+        let store = InMemoryStore {
+            matrix: Mutex::new(matrix),
+        };
+
+        let runner = MockRunner {
+            responses: Mutex::new(vec![CommandOutput {
+                success: true,
+                stdout: String::new(),
+                stderr: String::new(),
+            }]),
+        };
+
+        run(std::path::Path::new("fake.toml"), &runner, &store)
+            .await
+            .unwrap();
+
+        let result = store.matrix.lock().unwrap();
+        let entry = &result.packages["akeyless-python-sdk"].versions["5.0.0"];
+        assert_eq!(entry.status, Status::Verified);
+    }
+
+    #[tokio::test]
+    async fn test_verify_skips_fetchurl_builder() {
+        let mut versions = BTreeMap::new();
+        versions.insert(
+            "1.0.0".to_string(),
+            make_verified_entry("sha256-src", None),
+        );
+        let mut packages = BTreeMap::new();
+        packages.insert(
+            "akeyless-cli".to_string(),
+            Package {
+                owner: "t".into(),
+                repo: "t".into(),
+                language: Language::Go,
+                builder: Builder::Fetchurl,
+                tier: 1,
+                sub_packages: None,
+                proxy_vendor: None,
+                license: None,
+                description: "t".into(),
+                homepage: "t".into(),
+                fork_of: None,
+                fork_reason: None,
+                native_build_inputs: None,
+                python_deps: None,
+                pname_override: None,
+                dont_npm_build: None,
+                extra_post_install: None,
+                binary_name: None,
+                platform_urls: None,
+                track: crate::matrix::TrackMode::default(),
+                unstable_base: None,
+                versions,
+            },
+        );
+        let matrix = Matrix { packages };
+        let store = InMemoryStore {
+            matrix: Mutex::new(matrix),
+        };
+
+        let runner = MockRunner {
+            responses: Mutex::new(vec![]),
+        };
+
+        run(std::path::Path::new("fake.toml"), &runner, &store)
+            .await
+            .unwrap();
+    }
 }

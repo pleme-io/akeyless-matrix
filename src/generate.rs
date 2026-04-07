@@ -248,7 +248,6 @@ mod tests {
         .unwrap();
 
         let files = writer.files.lock().unwrap();
-        // All paths should be under /custom/output
         for (path, _) in files.iter() {
             assert!(
                 path.starts_with("/custom/output"),
@@ -256,5 +255,233 @@ mod tests {
                 path.display()
             );
         }
+    }
+
+    /// Build a multi-language matrix for content verification tests.
+    fn multi_lang_matrix() -> Matrix {
+        use crate::matrix::{
+            Builder, Language, Package, Status, TrackMode, VersionEntry,
+        };
+
+        let mut packages = BTreeMap::new();
+
+        let go_ver = VersionEntry {
+            rev: "gorev".into(),
+            source_hash: Some("sha256-gosrc".into()),
+            vendor_hash: Some("sha256-govendor".into()),
+            cargo_hash: None,
+            npm_deps_hash: None,
+            maven_hash: None,
+            nuget_deps_hash: None,
+            status: Status::Verified,
+            verified_at: None,
+            hash_aarch64_darwin: None,
+            hash_x86_64_darwin: None,
+            hash_x86_64_linux: None,
+            hash_aarch64_linux: None,
+        };
+        let mut go_versions = BTreeMap::new();
+        go_versions.insert("1.0.0".into(), go_ver);
+        packages.insert(
+            "akeyless-cli-tool".into(),
+            Package {
+                owner: "testorg".into(),
+                repo: "cli-tool".into(),
+                language: Language::Go,
+                builder: Builder::MkGoTool,
+                tier: 1,
+                sub_packages: Some(vec![".".into()]),
+                proxy_vendor: None,
+                license: None,
+                description: "CLI tool".into(),
+                homepage: "https://example.com".into(),
+                fork_of: None,
+                fork_reason: None,
+                native_build_inputs: None,
+                python_deps: None,
+                pname_override: None,
+                dont_npm_build: None,
+                extra_post_install: None,
+                binary_name: None,
+                platform_urls: None,
+                track: TrackMode::default(),
+                unstable_base: None,
+                versions: go_versions,
+            },
+        );
+
+        let rust_ver = VersionEntry {
+            rev: "rustrev".into(),
+            source_hash: Some("sha256-rustsrc".into()),
+            vendor_hash: None,
+            cargo_hash: Some("sha256-rustcargo".into()),
+            npm_deps_hash: None,
+            maven_hash: None,
+            nuget_deps_hash: None,
+            status: Status::Verified,
+            verified_at: None,
+            hash_aarch64_darwin: None,
+            hash_x86_64_darwin: None,
+            hash_x86_64_linux: None,
+            hash_aarch64_linux: None,
+        };
+        let mut rust_versions = BTreeMap::new();
+        rust_versions.insert("0.5.0".into(), rust_ver);
+        packages.insert(
+            "akeyless-rust-agent".into(),
+            Package {
+                owner: "testorg".into(),
+                repo: "rust-agent".into(),
+                language: Language::Rust,
+                builder: Builder::BuildRustPackage,
+                tier: 2,
+                sub_packages: None,
+                proxy_vendor: None,
+                license: None,
+                description: "Rust agent".into(),
+                homepage: "https://example.com/rust".into(),
+                fork_of: None,
+                fork_reason: None,
+                native_build_inputs: None,
+                python_deps: None,
+                pname_override: None,
+                dont_npm_build: None,
+                extra_post_install: None,
+                binary_name: None,
+                platform_urls: None,
+                track: TrackMode::default(),
+                unstable_base: None,
+                versions: rust_versions,
+            },
+        );
+
+        Matrix { packages }
+    }
+
+    #[test]
+    fn test_generate_sources_content_for_multi_lang() {
+        let matrix = multi_lang_matrix();
+        let store = InMemoryStore { matrix };
+        let writer = RecordingWriter::new();
+
+        run(Path::new("/fake/matrix.toml"), None, &store, &writer).unwrap();
+
+        let files = writer.files.lock().unwrap();
+        let sources = files
+            .iter()
+            .find(|(p, _)| p.display().to_string().ends_with("lib/sources.nix"))
+            .map(|(_, c)| c.clone())
+            .unwrap();
+
+        assert!(sources.contains("cli-tool = {"));
+        assert!(sources.contains(r#"hash = "sha256-gosrc";"#));
+        assert!(sources.contains("rust-agent = {"));
+        assert!(sources.contains(r#"hash = "sha256-rustsrc";"#));
+    }
+
+    #[test]
+    fn test_generate_go_content_for_multi_lang() {
+        let matrix = multi_lang_matrix();
+        let store = InMemoryStore { matrix };
+        let writer = RecordingWriter::new();
+
+        run(Path::new("/fake/matrix.toml"), None, &store, &writer).unwrap();
+
+        let files = writer.files.lock().unwrap();
+        let go = files
+            .iter()
+            .find(|(p, _)| p.display().to_string().ends_with("builds/go/default.nix"))
+            .map(|(_, c)| c.clone())
+            .unwrap();
+
+        assert!(go.contains("akeyless-cli-tool"));
+        assert!(go.contains(r#"vendorHash = "sha256-govendor";"#));
+        assert!(!go.contains("akeyless-rust-agent"));
+    }
+
+    #[test]
+    fn test_generate_rust_content_for_multi_lang() {
+        let matrix = multi_lang_matrix();
+        let store = InMemoryStore { matrix };
+        let writer = RecordingWriter::new();
+
+        run(Path::new("/fake/matrix.toml"), None, &store, &writer).unwrap();
+
+        let files = writer.files.lock().unwrap();
+        let rust = files
+            .iter()
+            .find(|(p, _)| p.display().to_string().ends_with("builds/rust/default.nix"))
+            .map(|(_, c)| c.clone())
+            .unwrap();
+
+        assert!(rust.contains("akeyless-rust-agent"));
+        assert!(rust.contains(r#"cargoHash = "sha256-rustcargo";"#));
+        assert!(!rust.contains("akeyless-cli-tool"));
+    }
+
+    #[test]
+    fn test_generate_metadata_content_for_multi_lang() {
+        let matrix = multi_lang_matrix();
+        let store = InMemoryStore { matrix };
+        let writer = RecordingWriter::new();
+
+        run(Path::new("/fake/matrix.toml"), None, &store, &writer).unwrap();
+
+        let files = writer.files.lock().unwrap();
+        let meta = files
+            .iter()
+            .find(|(p, _)| p.display().to_string().ends_with("lib/matrix-metadata.nix"))
+            .map(|(_, c)| c.clone())
+            .unwrap();
+
+        assert!(meta.contains(r#"akeyless-cli-tool = "cli-tool";"#));
+        assert!(meta.contains(r#"akeyless-rust-agent = "rust-agent";"#));
+        assert!(meta.contains("tier1Packages"));
+        assert!(meta.contains("tier2Packages"));
+    }
+
+    struct FailingStore;
+
+    impl MatrixStore for FailingStore {
+        fn load(&self, _path: &Path) -> Result<Matrix> {
+            anyhow::bail!("store load failed")
+        }
+        fn save(&self, _path: &Path, _matrix: &Matrix) -> Result<()> {
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn test_generate_propagates_store_error() {
+        let store = FailingStore;
+        let writer = RecordingWriter::new();
+
+        let result = run(Path::new("/fake/matrix.toml"), None, &store, &writer);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("store load failed"));
+    }
+
+    struct FailingWriter;
+
+    impl FileWriter for FailingWriter {
+        fn write_file(&self, _path: &Path, _content: &str) -> Result<()> {
+            anyhow::bail!("disk full")
+        }
+        fn create_dir_all(&self, _path: &Path) -> Result<()> {
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn test_generate_propagates_write_error() {
+        let matrix = Matrix {
+            packages: BTreeMap::new(),
+        };
+        let store = InMemoryStore { matrix };
+        let writer = FailingWriter;
+
+        let result = run(Path::new("/fake/matrix.toml"), None, &store, &writer);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("disk full"));
     }
 }
