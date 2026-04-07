@@ -180,39 +180,10 @@ mod tests {
     }
 
     use crate::matrix::{Builder, Language, Matrix, Package, VersionEntry};
+    use crate::matrix::test_helpers::{MockRunner, InMemoryStore};
     use crate::runner::CommandOutput;
-    use crate::storage::MatrixStore;
     use std::collections::BTreeMap;
     use std::sync::Mutex;
-
-    struct MockRunner {
-        responses: Mutex<Vec<CommandOutput>>,
-    }
-
-    #[async_trait::async_trait]
-    impl crate::runner::CommandRunner for MockRunner {
-        async fn run(&self, _program: &str, _args: &[&str]) -> anyhow::Result<CommandOutput> {
-            let mut responses = self.responses.lock().unwrap();
-            if responses.is_empty() {
-                anyhow::bail!("no more mock responses");
-            }
-            Ok(responses.remove(0))
-        }
-    }
-
-    struct InMemoryStore {
-        matrix: Mutex<Matrix>,
-    }
-
-    impl MatrixStore for InMemoryStore {
-        fn load(&self, _path: &std::path::Path) -> anyhow::Result<Matrix> {
-            Ok(self.matrix.lock().unwrap().clone())
-        }
-        fn save(&self, _path: &std::path::Path, matrix: &Matrix) -> anyhow::Result<()> {
-            *self.matrix.lock().unwrap() = matrix.clone();
-            Ok(())
-        }
-    }
 
     fn make_verified_entry(
         source_hash: &str,

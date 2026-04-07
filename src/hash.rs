@@ -153,23 +153,9 @@ error: hash mismatch in fixed-output derivation '/nix/store/xxx':
         assert!(DUMMY_HASH.ends_with('='));
     }
 
+    use crate::matrix::test_helpers::MockRunner;
     use crate::runner::CommandOutput;
     use std::sync::Mutex;
-
-    struct MockRunner {
-        responses: Mutex<Vec<CommandOutput>>,
-    }
-
-    #[async_trait::async_trait]
-    impl crate::runner::CommandRunner for MockRunner {
-        async fn run(&self, _program: &str, _args: &[&str]) -> anyhow::Result<CommandOutput> {
-            let mut responses = self.responses.lock().unwrap();
-            if responses.is_empty() {
-                anyhow::bail!("no more mock responses");
-            }
-            Ok(responses.remove(0))
-        }
-    }
 
     #[tokio::test]
     async fn test_prefetch_github_success() {
