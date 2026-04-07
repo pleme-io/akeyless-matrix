@@ -1662,5 +1662,500 @@ mod tests {
         // Attr name
         assert!(output.contains("akeyless-helm-charts = {"));
     }
+
+    // ---------------------------------------------------------------------------
+    // Rust build tests
+    // ---------------------------------------------------------------------------
+
+    fn test_rust_matrix() -> Matrix {
+        let mut versions = BTreeMap::new();
+        versions.insert(
+            "0.3.0".to_string(),
+            VersionEntry {
+                rev: "rustrev".into(),
+                source_hash: Some("sha256-rustsrc".into()),
+                vendor_hash: None,
+                cargo_hash: Some("sha256-cargo789".into()),
+                npm_deps_hash: None,
+                maven_hash: None,
+                nuget_deps_hash: None,
+                status: Status::Verified,
+                verified_at: None,
+                hash_aarch64_darwin: None,
+                hash_x86_64_darwin: None,
+                hash_x86_64_linux: None,
+                hash_aarch64_linux: None,
+            },
+        );
+
+        let mut packages = BTreeMap::new();
+        packages.insert(
+            "akeyless-rust-tool".to_string(),
+            Package {
+                owner: "akeylesslabs".into(),
+                repo: "rust-tool".into(),
+                language: Language::Rust,
+                builder: Builder::BuildRustPackage,
+                tier: 2,
+                sub_packages: None,
+                proxy_vendor: None,
+                license: None,
+                description: "Akeyless Rust Tool".into(),
+                homepage: "https://github.com/akeylesslabs/rust-tool".into(),
+                fork_of: None,
+                fork_reason: None,
+                native_build_inputs: Some(vec!["protobuf".into(), "pkg-config".into()]),
+                python_deps: None,
+                pname_override: None,
+                dont_npm_build: None,
+                extra_post_install: None,
+                binary_name: None,
+                platform_urls: None,
+                track: crate::matrix::TrackMode::default(),
+                unstable_base: None,
+                versions,
+            },
+        );
+
+        Matrix { packages }
+    }
+
+    #[test]
+    fn test_generate_rust_builds_content() {
+        let matrix = test_rust_matrix();
+        let output = generate_rust_builds(&matrix);
+        assert!(output.contains("buildRustPackage"));
+        assert!(output.contains(r#"pname = "akeyless-rust-tool";"#));
+        assert!(output.contains("sources.rust-tool.meta.version"));
+        assert!(output.contains("src = sources.rust-tool;"));
+        assert!(output.contains(r#"cargoHash = "sha256-cargo789";"#));
+        assert!(output.contains("doCheck = false;"));
+        assert!(output.contains("nativeBuildInputs = [ pkgs.protobuf pkgs.pkg-config ];"));
+        assert!(output.contains(r#"description = "Akeyless Rust Tool";"#));
+        assert!(output.contains(r#"homepage = "https://github.com/akeylesslabs/rust-tool";"#));
+        assert!(output.contains("license = pkgs.lib.licenses.asl20;"));
+    }
+
+    #[test]
+    fn test_generate_rust_builds_no_cargo_hash() {
+        let mut matrix = test_rust_matrix();
+        let pkg = matrix.packages.get_mut("akeyless-rust-tool").unwrap();
+        pkg.versions.get_mut("0.3.0").unwrap().cargo_hash = None;
+
+        let output = generate_rust_builds(&matrix);
+        assert!(!output.contains("cargoHash"));
+        assert!(output.contains("akeyless-rust-tool"));
+    }
+
+    #[test]
+    fn test_generate_rust_builds_no_native_inputs() {
+        let mut matrix = test_rust_matrix();
+        let pkg = matrix.packages.get_mut("akeyless-rust-tool").unwrap();
+        pkg.native_build_inputs = None;
+
+        let output = generate_rust_builds(&matrix);
+        assert!(!output.contains("nativeBuildInputs"));
+    }
+
+    #[test]
+    fn test_generate_rust_builds_empty_for_non_rust() {
+        let matrix = test_matrix();
+        let output = generate_rust_builds(&matrix);
+        assert!(!output.contains("akeyless-test"));
+        assert!(output.contains("Rust package builds"));
+    }
+
+    // ---------------------------------------------------------------------------
+    // Python build tests
+    // ---------------------------------------------------------------------------
+
+    fn test_python_matrix() -> Matrix {
+        let mut versions = BTreeMap::new();
+        versions.insert(
+            "5.0.22".to_string(),
+            VersionEntry {
+                rev: "pyrev".into(),
+                source_hash: Some("sha256-pysrc".into()),
+                vendor_hash: None,
+                cargo_hash: None,
+                npm_deps_hash: None,
+                maven_hash: None,
+                nuget_deps_hash: None,
+                status: Status::Verified,
+                verified_at: None,
+                hash_aarch64_darwin: None,
+                hash_x86_64_darwin: None,
+                hash_x86_64_linux: None,
+                hash_aarch64_linux: None,
+            },
+        );
+
+        let mut packages = BTreeMap::new();
+        packages.insert(
+            "akeyless-python-sdk".to_string(),
+            Package {
+                owner: "akeylesslabs".into(),
+                repo: "akeyless-python".into(),
+                language: Language::Python,
+                builder: Builder::MkPythonPackage,
+                tier: 3,
+                sub_packages: None,
+                proxy_vendor: None,
+                license: None,
+                description: "Akeyless Python SDK".into(),
+                homepage: "https://github.com/akeylesslabs/akeyless-python".into(),
+                fork_of: None,
+                fork_reason: None,
+                native_build_inputs: None,
+                python_deps: Some(vec!["requests".into(), "urllib3".into()]),
+                pname_override: Some("akeyless".into()),
+                dont_npm_build: None,
+                extra_post_install: None,
+                binary_name: None,
+                platform_urls: None,
+                track: crate::matrix::TrackMode::default(),
+                unstable_base: None,
+                versions,
+            },
+        );
+
+        Matrix { packages }
+    }
+
+    #[test]
+    fn test_generate_python_builds_content() {
+        let matrix = test_python_matrix();
+        let output = generate_python_builds(&matrix);
+        assert!(output.contains("mkPythonPackage pkgs {"));
+        assert!(output.contains(r#"pname = "akeyless";"#));
+        assert!(output.contains("sources.python-sdk.meta.version"));
+        assert!(output.contains("src = sources.python-sdk;"));
+        assert!(output.contains("propagatedBuildInputs = with pkgs.python3Packages; ["));
+        assert!(output.contains("      requests"));
+        assert!(output.contains("      urllib3"));
+        assert!(output.contains(r#"description = "Akeyless Python SDK";"#));
+    }
+
+    #[test]
+    fn test_generate_python_builds_no_deps() {
+        let mut matrix = test_python_matrix();
+        let pkg = matrix.packages.get_mut("akeyless-python-sdk").unwrap();
+        pkg.python_deps = None;
+        pkg.pname_override = None;
+
+        let output = generate_python_builds(&matrix);
+        assert!(!output.contains("propagatedBuildInputs"));
+        assert!(output.contains(r#"pname = "akeyless-python-sdk";"#));
+    }
+
+    #[test]
+    fn test_generate_python_builds_empty_for_non_python() {
+        let matrix = test_matrix();
+        let output = generate_python_builds(&matrix);
+        assert!(!output.contains("akeyless-test"));
+        assert!(output.contains("mkPythonPackage"));
+    }
+
+    // ---------------------------------------------------------------------------
+    // TypeScript build tests
+    // ---------------------------------------------------------------------------
+
+    fn test_typescript_matrix() -> Matrix {
+        let mut versions = BTreeMap::new();
+        versions.insert(
+            "2.1.0".to_string(),
+            VersionEntry {
+                rev: "tsrev".into(),
+                source_hash: Some("sha256-tssrc".into()),
+                vendor_hash: None,
+                cargo_hash: None,
+                npm_deps_hash: Some("sha256-npmdeps".into()),
+                maven_hash: None,
+                nuget_deps_hash: None,
+                status: Status::Verified,
+                verified_at: None,
+                hash_aarch64_darwin: None,
+                hash_x86_64_darwin: None,
+                hash_x86_64_linux: None,
+                hash_aarch64_linux: None,
+            },
+        );
+
+        let mut packages = BTreeMap::new();
+        packages.insert(
+            "akeyless-ts-tool".to_string(),
+            Package {
+                owner: "akeylesslabs".into(),
+                repo: "ts-tool".into(),
+                language: Language::TypeScript,
+                builder: Builder::BuildNpmPackage,
+                tier: 2,
+                sub_packages: None,
+                proxy_vendor: None,
+                license: None,
+                description: "Akeyless TypeScript Tool".into(),
+                homepage: "https://github.com/akeylesslabs/ts-tool".into(),
+                fork_of: None,
+                fork_reason: None,
+                native_build_inputs: None,
+                python_deps: None,
+                pname_override: None,
+                dont_npm_build: Some(true),
+                extra_post_install: None,
+                binary_name: None,
+                platform_urls: None,
+                track: crate::matrix::TrackMode::default(),
+                unstable_base: None,
+                versions,
+            },
+        );
+
+        Matrix { packages }
+    }
+
+    #[test]
+    fn test_generate_typescript_builds_content() {
+        let matrix = test_typescript_matrix();
+        let output = generate_typescript_builds(&matrix);
+        assert!(output.contains("buildNpmPackage"));
+        assert!(output.contains(r#"pname = "akeyless-ts-tool";"#));
+        assert!(output.contains("sources.ts-tool.meta.version"));
+        assert!(output.contains("src = sources.ts-tool;"));
+        assert!(output.contains(r#"npmDepsHash = "sha256-npmdeps";"#));
+        assert!(output.contains("dontNpmBuild = true;"));
+        assert!(output.contains(r#"description = "Akeyless TypeScript Tool";"#));
+        assert!(output.contains("license = pkgs.lib.licenses.asl20;"));
+    }
+
+    #[test]
+    fn test_generate_typescript_builds_no_npm_hash() {
+        let mut matrix = test_typescript_matrix();
+        let pkg = matrix.packages.get_mut("akeyless-ts-tool").unwrap();
+        pkg.versions.get_mut("2.1.0").unwrap().npm_deps_hash = None;
+        pkg.dont_npm_build = None;
+
+        let output = generate_typescript_builds(&matrix);
+        assert!(!output.contains("npmDepsHash"));
+        assert!(!output.contains("dontNpmBuild"));
+    }
+
+    // ---------------------------------------------------------------------------
+    // Binary/fetchurl build tests
+    // ---------------------------------------------------------------------------
+
+    fn test_binary_matrix() -> Matrix {
+        let mut platform_urls = BTreeMap::new();
+        platform_urls.insert(
+            "aarch64-darwin".to_string(),
+            "https://dl.example.com/{version}/bin-aarch64-darwin".to_string(),
+        );
+        platform_urls.insert(
+            "x86_64-linux".to_string(),
+            "https://dl.example.com/{version}/bin-x86_64-linux".to_string(),
+        );
+
+        let mut versions = BTreeMap::new();
+        versions.insert(
+            "3.5.0".to_string(),
+            VersionEntry {
+                rev: "binrev".into(),
+                source_hash: None,
+                vendor_hash: None,
+                cargo_hash: None,
+                npm_deps_hash: None,
+                maven_hash: None,
+                nuget_deps_hash: None,
+                status: Status::Verified,
+                verified_at: None,
+                hash_aarch64_darwin: Some("sha256-darwinHash".into()),
+                hash_x86_64_darwin: None,
+                hash_x86_64_linux: Some("sha256-linuxHash".into()),
+                hash_aarch64_linux: None,
+            },
+        );
+
+        let mut packages = BTreeMap::new();
+        packages.insert(
+            "akeyless-cli".to_string(),
+            Package {
+                owner: "akeylesslabs".into(),
+                repo: "akeyless-cli".into(),
+                language: Language::Go,
+                builder: Builder::Fetchurl,
+                tier: 1,
+                sub_packages: None,
+                proxy_vendor: None,
+                license: Some("unfree".into()),
+                description: "Akeyless CLI".into(),
+                homepage: "https://akeyless.io".into(),
+                fork_of: None,
+                fork_reason: None,
+                native_build_inputs: None,
+                python_deps: None,
+                pname_override: None,
+                dont_npm_build: None,
+                extra_post_install: None,
+                binary_name: Some("akeyless".into()),
+                platform_urls: Some(platform_urls),
+                track: crate::matrix::TrackMode::default(),
+                unstable_base: None,
+                versions,
+            },
+        );
+
+        Matrix { packages }
+    }
+
+    #[test]
+    fn test_generate_binary_builds_content() {
+        let matrix = test_binary_matrix();
+        let output = generate_binary_builds(&matrix);
+        assert!(output.contains("stdenv.mkDerivation"));
+        assert!(output.contains(r#"pname = "akeyless-cli";"#));
+        assert!(output.contains(r#"version = "3.5.0";"#));
+        assert!(output.contains("dontUnpack = true;"));
+        assert!(output.contains("autoPatchelfHook"));
+        assert!(output.contains("cp $src $out/bin/akeyless"));
+        assert!(output.contains("chmod +x $out/bin/akeyless"));
+        assert!(output.contains(r#"mainProgram = "akeyless";"#));
+        assert!(output.contains("license = pkgs.lib.licenses.unfree;"));
+    }
+
+    #[test]
+    fn test_generate_binary_builds_platform_urls_substituted() {
+        let matrix = test_binary_matrix();
+        let output = generate_binary_builds(&matrix);
+        assert!(output.contains("https://dl.example.com/3.5.0/bin-aarch64-darwin"));
+        assert!(output.contains("https://dl.example.com/3.5.0/bin-x86_64-linux"));
+        assert!(output.contains(r#"hash = "sha256-darwinHash";"#));
+        assert!(output.contains(r#"hash = "sha256-linuxHash";"#));
+    }
+
+    #[test]
+    fn test_generate_binary_builds_empty_for_non_fetchurl() {
+        let matrix = test_matrix();
+        let output = generate_binary_builds(&matrix);
+        assert!(!output.contains("akeyless-test"));
+    }
+
+    #[test]
+    fn test_generate_binary_builds_not_in_sources() {
+        let matrix = test_binary_matrix();
+        let output = generate_sources_nix(&matrix);
+        assert!(!output.contains("akeyless-cli"));
+    }
+
+    #[test]
+    fn test_generate_binary_in_metadata() {
+        let matrix = test_binary_matrix();
+        let output = generate_matrix_metadata(&matrix);
+        assert!(output.contains(r#"akeyless-cli = "akeyless-cli";"#));
+    }
+
+    // ---------------------------------------------------------------------------
+    // license_to_nix coverage
+    // ---------------------------------------------------------------------------
+
+    #[test]
+    fn test_license_to_nix_all_variants() {
+        assert_eq!(license_to_nix("MPL-2.0"), "mpl20");
+        assert_eq!(license_to_nix("MIT"), "mit");
+        assert_eq!(license_to_nix("Apache-2.0"), "asl20");
+        assert_eq!(license_to_nix("BSD-3-Clause"), "bsd3");
+        assert_eq!(license_to_nix("GPL-3.0"), "gpl3Only");
+        assert_eq!(license_to_nix("Unknown-License"), "free");
+    }
+
+    // ---------------------------------------------------------------------------
+    // Go builds: proxy_vendor on MkGoTool
+    // ---------------------------------------------------------------------------
+
+    #[test]
+    fn test_generate_go_builds_proxy_vendor() {
+        let mut matrix = test_matrix();
+        let pkg = matrix.packages.get_mut("akeyless-test").unwrap();
+        pkg.proxy_vendor = Some(true);
+
+        let output = generate_go_builds(&matrix);
+        assert!(output.contains("proxyVendor = true;"));
+    }
+
+    // ---------------------------------------------------------------------------
+    // Multi-version for Rust (older version gets sanitized key)
+    // ---------------------------------------------------------------------------
+
+    #[test]
+    fn test_generate_rust_builds_multi_version() {
+        let mut matrix = test_rust_matrix();
+        let pkg = matrix.packages.get_mut("akeyless-rust-tool").unwrap();
+        pkg.versions.insert(
+            "0.2.0".to_string(),
+            VersionEntry {
+                rev: "oldrev".into(),
+                source_hash: Some("sha256-oldsrc".into()),
+                vendor_hash: None,
+                cargo_hash: Some("sha256-oldcargo".into()),
+                npm_deps_hash: None,
+                maven_hash: None,
+                nuget_deps_hash: None,
+                status: Status::Verified,
+                verified_at: None,
+                hash_aarch64_darwin: None,
+                hash_x86_64_darwin: None,
+                hash_x86_64_linux: None,
+                hash_aarch64_linux: None,
+            },
+        );
+
+        let output = generate_rust_builds(&matrix);
+        assert!(output.contains("akeyless-rust-tool ="));
+        assert!(output.contains("akeyless-rust-tool-0_2_0 ="));
+        assert!(output.contains(r#"cargoHash = "sha256-cargo789";"#));
+        assert!(output.contains(r#"cargoHash = "sha256-oldcargo";"#));
+    }
+
+    // ---------------------------------------------------------------------------
+    // Sources: fork with no fork_reason uses default "fork"
+    // ---------------------------------------------------------------------------
+
+    #[test]
+    fn test_generate_sources_fork_default_reason() {
+        let mut matrix = test_matrix();
+        let pkg = matrix.packages.get_mut("akeyless-test").unwrap();
+        pkg.fork_of = Some("upstream/repo".into());
+        pkg.fork_reason = None;
+
+        let output = generate_sources_nix(&matrix);
+        assert!(output.contains("# fork: fork"));
+    }
+
+    // ---------------------------------------------------------------------------
+    // Binary builds: custom binary_name vs default
+    // ---------------------------------------------------------------------------
+
+    #[test]
+    fn test_generate_binary_builds_default_binary_name() {
+        let mut matrix = test_binary_matrix();
+        let pkg = matrix.packages.get_mut("akeyless-cli").unwrap();
+        pkg.binary_name = None;
+
+        let output = generate_binary_builds(&matrix);
+        assert!(output.contains("cp $src $out/bin/akeyless-cli"));
+        assert!(output.contains(r#"mainProgram = "akeyless-cli";"#));
+    }
+
+    // ---------------------------------------------------------------------------
+    // Binary builds: MIT license mapping
+    // ---------------------------------------------------------------------------
+
+    #[test]
+    fn test_generate_binary_builds_mit_license() {
+        let mut matrix = test_binary_matrix();
+        let pkg = matrix.packages.get_mut("akeyless-cli").unwrap();
+        pkg.license = Some("MIT".into());
+
+        let output = generate_binary_builds(&matrix);
+        assert!(output.contains("license = pkgs.lib.licenses.mit;"));
+    }
 }
 
