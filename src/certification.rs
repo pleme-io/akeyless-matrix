@@ -48,31 +48,29 @@ pub struct CertificationLog {
 /// same hash, regardless of pending/broken entries or matrix ordering.
 #[must_use]
 pub fn compute_fingerprint(matrix: &Matrix) -> String {
-    let mut entries: Vec<VerifiedEntry> = Vec::new();
+    let mut entries: Vec<VerifiedEntry> = matrix.packages.iter()
+        .flat_map(|(pkg_name, pkg)| {
+            pkg.versions.iter()
+                .filter(|(_, entry)| entry.status == Status::Verified)
+                .map(move |(ver, entry)| {
+                    let build_hash = entry
+                        .vendor_hash.as_deref()
+                        .or(entry.cargo_hash.as_deref())
+                        .or(entry.npm_deps_hash.as_deref())
+                        .or(entry.maven_hash.as_deref())
+                        .or(entry.nuget_deps_hash.as_deref())
+                        .unwrap_or("")
+                        .to_string();
 
-    for (pkg_name, pkg) in &matrix.packages {
-        for (ver, entry) in &pkg.versions {
-            if entry.status != Status::Verified {
-                continue;
-            }
-            let build_hash = entry
-                .vendor_hash
-                .as_deref()
-                .or(entry.cargo_hash.as_deref())
-                .or(entry.npm_deps_hash.as_deref())
-                .or(entry.maven_hash.as_deref())
-                .or(entry.nuget_deps_hash.as_deref())
-                .unwrap_or("")
-                .to_string();
-
-            entries.push(VerifiedEntry {
-                package: pkg_name.clone(),
-                version: ver.clone(),
-                source_hash: entry.source_hash.clone().unwrap_or_default(),
-                build_hash,
-            });
-        }
-    }
+                    VerifiedEntry {
+                        package: pkg_name.clone(),
+                        version: ver.clone(),
+                        source_hash: entry.source_hash.clone().unwrap_or_default(),
+                        build_hash,
+                    }
+                })
+        })
+        .collect();
 
     // Sort for determinism (BTreeMap is already sorted, but versions within
     // a package are also in BTreeMap order)
@@ -110,24 +108,14 @@ pub fn compute_delta(
     let prev_latest = latest_verified_map(prev);
     let curr_latest = latest_verified_map(current);
 
-    let mut added = Vec::new();
-    let mut updated = Vec::new();
-
-    // Find newly verified entries (any version, not just latest)
-    for entry in &curr_all {
-        if !prev_all.contains(entry) {
-            added.push(entry.clone());
-        }
-    }
-
-    // Find packages whose latest version changed
-    for (key, curr_ver) in &curr_latest {
-        if let Some(prev_ver) = prev_latest.get(key)
-            && prev_ver != curr_ver
-        {
-            updated.push(format!("{key}: {prev_ver} -> {curr_ver}"));
-        }
-    }
+    let mut added: Vec<String> = curr_all.difference(&prev_all).cloned().collect();
+    let mut updated: Vec<String> = curr_latest.iter()
+        .filter_map(|(key, curr_ver)| {
+            prev_latest.get(key)
+                .filter(|prev_ver| *prev_ver != curr_ver)
+                .map(|prev_ver| format!("{key}: {prev_ver} -> {curr_ver}"))
+        })
+        .collect();
 
     added.sort();
     updated.sort();
@@ -136,26 +124,22 @@ pub fn compute_delta(
 
 /// Build set of all "package@version" strings for verified entries.
 fn all_verified_set(matrix: &Matrix) -> std::collections::BTreeSet<String> {
-    let mut set = std::collections::BTreeSet::new();
-    for (name, pkg) in &matrix.packages {
-        for (ver, entry) in &pkg.versions {
-            if entry.status == Status::Verified {
-                set.insert(format!("{name}@{ver}"));
-            }
-        }
-    }
-    set
+    matrix.packages.iter()
+        .flat_map(|(name, pkg)| {
+            pkg.versions.iter()
+                .filter(|(_, entry)| entry.status == Status::Verified)
+                .map(move |(ver, _)| format!("{name}@{ver}"))
+        })
+        .collect()
 }
 
-/// Build a map of package → latest verified version.
+/// Build a map of package -> latest verified version.
 fn latest_verified_map(matrix: &Matrix) -> BTreeMap<String, String> {
-    let mut map = BTreeMap::new();
-    for (name, pkg) in &matrix.packages {
-        if let Some((ver, _)) = Matrix::latest_verified(pkg) {
-            map.insert(name.clone(), ver.to_string());
-        }
-    }
-    map
+    matrix.packages.iter()
+        .filter_map(|(name, pkg)| {
+            Matrix::latest_verified(pkg).map(|(ver, _)| (name.clone(), ver.to_string()))
+        })
+        .collect()
 }
 
 /// Load the certification log from disk (or return empty if missing).
