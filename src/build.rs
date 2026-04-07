@@ -151,6 +151,7 @@ async fn build_entry(
 
 /// Check if a Go package needs a vendor hash extraction.
 /// Some Go packages (like akeyless-go-sdk) have vendored deps and use null vendor hash.
+#[must_use]
 fn needs_vendor_hash(pkg: &Package, entry: &VersionEntry) -> bool {
     if entry.vendor_hash.is_some() {
         return false;

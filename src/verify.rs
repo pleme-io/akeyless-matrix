@@ -137,6 +137,7 @@ async fn verify_entry(
 }
 
 /// Extract the first meaningful error line from stderr.
+#[must_use]
 fn first_error_line(stderr: &str) -> String {
     stderr
         .lines()
