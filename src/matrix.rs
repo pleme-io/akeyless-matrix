@@ -12,10 +12,11 @@ use toml_edit::DocumentMut;
 // Enums
 // ---------------------------------------------------------------------------
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "lowercase")]
 #[non_exhaustive]
 pub enum Status {
+    #[default]
     Pending,
     Building,
     Verified,
@@ -187,8 +188,9 @@ impl FromStr for TrackMode {
 // Data types
 // ---------------------------------------------------------------------------
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct VersionEntry {
+    #[serde(default)]
     pub rev: String,
     pub source_hash: Option<String>,
     pub vendor_hash: Option<String>,
@@ -273,7 +275,7 @@ pub struct Package {
     pub versions: BTreeMap<String, VersionEntry>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Matrix {
     pub packages: BTreeMap<String, Package>,
 }
@@ -794,6 +796,26 @@ status = "verified"
             assert_eq!(*t, t.to_string().parse::<TrackMode>().unwrap());
         }
         assert!("invalid".parse::<TrackMode>().is_err());
+    }
+
+    #[test]
+    fn test_status_default() {
+        assert_eq!(Status::default(), Status::Pending);
+    }
+
+    #[test]
+    fn test_version_entry_default() {
+        let entry = VersionEntry::default();
+        assert_eq!(entry.status, Status::Pending);
+        assert!(entry.rev.is_empty());
+        assert!(entry.source_hash.is_none());
+        assert!(entry.vendor_hash.is_none());
+    }
+
+    #[test]
+    fn test_matrix_default() {
+        let matrix = Matrix::default();
+        assert!(matrix.packages.is_empty());
     }
 
     #[test]
