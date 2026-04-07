@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use anyhow::{Result, bail};
+use anyhow::{Context, Result, bail};
 use chrono::Utc;
 
 use crate::display;
@@ -35,7 +35,9 @@ pub async fn run(
     let mut failed = 0u32;
 
     for pkg_name in &pkg_names {
-        let pkg = matrix.packages.get(pkg_name).unwrap().clone();
+        let pkg = matrix.packages.get(pkg_name)
+            .with_context(|| format!("package '{pkg_name}' disappeared from matrix during build"))?
+            .clone();
         let pending_versions: Vec<(String, VersionEntry)> = pkg
             .versions
             .iter()
@@ -60,11 +62,10 @@ pub async fn run(
                 }
             }
 
-            // Update the entry in-place
-            let pkg_mut = matrix.packages.get_mut(pkg_name).unwrap();
+            let pkg_mut = matrix.packages.get_mut(pkg_name)
+                .with_context(|| format!("package '{pkg_name}' disappeared from matrix during build"))?;
             pkg_mut.versions.insert(ver_key, entry);
 
-            // Save after each entry so progress is not lost
             store.save(matrix_path, &matrix)?;
         }
     }
