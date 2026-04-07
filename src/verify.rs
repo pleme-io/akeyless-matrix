@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use chrono::Utc;
 
 use crate::display;
@@ -27,7 +27,9 @@ pub async fn run(
     let pkg_names: Vec<String> = matrix.packages.keys().cloned().collect();
 
     for pkg_name in &pkg_names {
-        let pkg = matrix.packages.get(pkg_name).unwrap().clone();
+        let pkg = matrix.packages.get(pkg_name)
+            .with_context(|| format!("package '{pkg_name}' disappeared from matrix during verify"))?
+            .clone();
 
         // Only verify packages with a source-built builder
         if matches!(
@@ -45,13 +47,17 @@ pub async fn run(
         let ver_keys: Vec<String> = pkg.versions.keys().cloned().collect();
 
         for ver_key in &ver_keys {
-            let entry = pkg.versions.get(ver_key).unwrap().clone();
+            let entry = pkg.versions.get(ver_key)
+                .with_context(|| format!("version '{ver_key}' disappeared from {pkg_name}"))?
+                .clone();
             display::print_build_start(pkg_name, ver_key);
 
             let result = verify_entry(&pkg, &entry, runner).await;
 
-            let pkg_mut = matrix.packages.get_mut(pkg_name).unwrap();
-            let entry_mut = pkg_mut.versions.get_mut(ver_key).unwrap();
+            let pkg_mut = matrix.packages.get_mut(pkg_name)
+                .with_context(|| format!("package '{pkg_name}' disappeared from matrix during verify"))?;
+            let entry_mut = pkg_mut.versions.get_mut(ver_key)
+                .with_context(|| format!("version '{ver_key}' disappeared from {pkg_name}"))?;
 
             match result {
                 Ok(()) => {
