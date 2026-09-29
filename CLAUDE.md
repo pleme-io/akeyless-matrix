@@ -29,11 +29,11 @@ src/
 ├── runner.rs        # CommandRunner trait (abstracts process execution)
 ├── storage.rs       # MatrixStore + FileWriter traits (abstracts file I/O)
 ├── hash.rs          # nix-prefetch-github wrapper, hash regex extraction
-├── nixexpr.rs       # Shared Nix expression templates (used by build + verify)
+├── nixexpr.rs       # Shared Nix expression templates (used by build + verify); still string-built, next to move onto gen-nix
 ├── build.rs         # Build pending entries: prefetch → hash extract → mark verified/broken
 ├── verify.rs        # Verify ALL entries by rebuilding with stored hashes
 ├── generate.rs      # Orchestrate writing 12 Nix files from matrix
-├── nix.rs           # Nix code generators (sources, go/rust/python/ts/java/csharp/ruby/php/helm builds, metadata)
+├── nix.rs           # Nix file generators (sources, go/rust/python/ts/java/csharp/ruby/php/helm builds, metadata), typed gen-nix trees
 ├── certification.rs # SHA-256 fingerprinting, delta tracking, audit log
 ├── add.rs           # Add pending version entry
 ├── status.rs        # Print status table
@@ -57,7 +57,7 @@ All I/O boundaries use traits for testability:
 - **Multi-version**: all verified versions emitted as independent Nix derivations
 - **Hash extraction**: exploit Nix build errors (`got: sha256-...`) as an oracle
 - **Certification**: SHA-256 fingerprint of all verified (package, version, source_hash, build_hash) tuples
-- **Nix escaping**: descriptions/homepages sanitized via `nix_escape()` to prevent injection
+- **Typed Nix emission**: `nix.rs` builds every file as a `gen_nix::NixValue` tree and renders it through gen-nix, so string escaping (quotes, backslashes, `${`) is the renderer's job, never a call site's. Layout (comments, blank lines, inline sets) is typed too (`LaidOut*`, `AttrSetEntry::Comment`/`Blank`/`Line`).
 
 ## Version Naming
 
