@@ -1,8 +1,8 @@
 {
   "schema_version": 2,
-  "cargo_lock_sha256": "65520e91406e6229543e422403c671377e3ac8e844920b901f53e93d3b1094cb",
+  "cargo_lock_sha256": "26f10271851f84c498e9499c3004805705419e1d495d371fbb0b936d83573b18",
   "manifest_sha256": {
-    "Cargo.toml": "c87d9377f5bf3db2f6927d1699f471957b86550eca2327163c58c03f7d779f1e"
+    "Cargo.toml": "766215f5a2845cd0217cbea51ed062ff0dc36feaa99801d0cef46b596a70771a"
   },
   "target_resolves": {
     "base": {
@@ -25,7 +25,7 @@
           "std"
         ]
       },
-      "akeyless-matrix-0.1.1": {
+      "akeyless-matrix-0.1.2": {
         "runtime_dependencies": [
           {
             "name": "anyhow",
@@ -39,7 +39,7 @@
           },
           {
             "name": "async_trait",
-            "package_key": "async-trait-0.1.91",
+            "package_key": "async-trait-0.1.92",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -61,7 +61,7 @@
           },
           {
             "name": "clap",
-            "package_key": "clap-4.6.6",
+            "package_key": "clap-4.6.7",
             "kind": "normal",
             "features": [
               "derive"
@@ -135,7 +135,7 @@
           },
           {
             "name": "thiserror",
-            "package_key": "thiserror-2.0.19",
+            "package_key": "thiserror-2.0.21",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -294,7 +294,7 @@
         "build_dependencies": [],
         "features": []
       },
-      "async-trait-0.1.91": {
+      "async-trait-0.1.92": {
         "runtime_dependencies": [
           {
             "name": "proc_macro2",
@@ -318,7 +318,7 @@
           },
           {
             "name": "syn",
-            "package_key": "syn-3.0.3",
+            "package_key": "syn-3.0.6",
             "kind": "normal",
             "features": [
               "clone-impls",
@@ -350,11 +350,11 @@
           "std"
         ]
       },
-      "cc-1.4.0": {
+      "cc-1.5.1": {
         "runtime_dependencies": [
           {
             "name": "find_msvc_tools",
-            "package_key": "find-msvc-tools-0.1.9",
+            "package_key": "find-msvc-tools-0.1.14",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -376,7 +376,7 @@
         "build_dependencies": [],
         "features": []
       },
-      "cfg-if-1.0.4": {
+      "cfg-if-1.0.5": {
         "runtime_dependencies": [],
         "build_dependencies": [],
         "features": []
@@ -433,11 +433,11 @@
           "windows-link"
         ]
       },
-      "clap-4.6.6": {
+      "clap-4.6.7": {
         "runtime_dependencies": [
           {
             "name": "clap_builder",
-            "package_key": "clap_builder-4.6.6",
+            "package_key": "clap_builder-4.6.7",
             "kind": "normal",
             "features": [],
             "uses_default_features": false,
@@ -447,7 +447,7 @@
           },
           {
             "name": "clap_derive",
-            "package_key": "clap_derive-4.6.4",
+            "package_key": "clap_derive-4.6.7",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -468,7 +468,7 @@
           "usage"
         ]
       },
-      "clap_builder-4.6.6": {
+      "clap_builder-4.6.7": {
         "runtime_dependencies": [
           {
             "name": "anstream",
@@ -492,7 +492,7 @@
           },
           {
             "name": "clap_lex",
-            "package_key": "clap_lex-1.1.0",
+            "package_key": "clap_lex-1.1.1",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -521,7 +521,7 @@
           "usage"
         ]
       },
-      "clap_derive-4.6.4": {
+      "clap_derive-4.6.7": {
         "runtime_dependencies": [
           {
             "name": "heck",
@@ -555,7 +555,7 @@
           },
           {
             "name": "syn",
-            "package_key": "syn-3.0.3",
+            "package_key": "syn-3.0.6",
             "kind": "normal",
             "features": [
               "full"
@@ -571,7 +571,7 @@
           "default"
         ]
       },
-      "clap_lex-1.1.0": {
+      "clap_lex-1.1.1": {
         "runtime_dependencies": [],
         "build_dependencies": [],
         "features": []
@@ -690,7 +690,7 @@
           "std"
         ]
       },
-      "find-msvc-tools-0.1.9": {
+      "find-msvc-tools-0.1.14": {
         "runtime_dependencies": [],
         "build_dependencies": [],
         "features": []
@@ -709,7 +709,7 @@
           },
           {
             "name": "indexmap",
-            "package_key": "indexmap-2.14.0",
+            "package_key": "indexmap-2.14.2",
             "kind": "normal",
             "features": [
               "serde"
@@ -721,7 +721,7 @@
           },
           {
             "name": "thiserror",
-            "package_key": "thiserror-2.0.19",
+            "package_key": "thiserror-2.0.21",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -759,7 +759,7 @@
           },
           {
             "name": "indexmap",
-            "package_key": "indexmap-2.14.0",
+            "package_key": "indexmap-2.14.2",
             "kind": "normal",
             "features": [
               "serde"
@@ -803,7 +803,7 @@
           },
           {
             "name": "thiserror",
-            "package_key": "thiserror-2.0.19",
+            "package_key": "thiserror-2.0.21",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -825,7 +825,7 @@
         "build_dependencies": [],
         "features": []
       },
-      "indexmap-2.14.0": {
+      "indexmap-2.14.2": {
         "runtime_dependencies": [
           {
             "name": "equivalent",
@@ -922,7 +922,7 @@
           "std"
         ]
       },
-      "mio-1.2.2": {
+      "mio-1.2.3": {
         "runtime_dependencies": [
           {
             "name": "libc",
@@ -995,7 +995,7 @@
         "runtime_dependencies": [
           {
             "name": "cfg_if",
-            "package_key": "cfg-if-1.0.4",
+            "package_key": "cfg-if-1.0.5",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -1015,7 +1015,7 @@
           },
           {
             "name": "smallvec",
-            "package_key": "smallvec-1.15.2",
+            "package_key": "smallvec-1.16.2",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -1036,7 +1036,7 @@
         "runtime_dependencies": [
           {
             "name": "unicode_ident",
-            "package_key": "unicode-ident-1.0.24",
+            "package_key": "unicode-ident-1.0.26",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -1288,7 +1288,7 @@
           },
           {
             "name": "syn",
-            "package_key": "syn-3.0.3",
+            "package_key": "syn-3.0.6",
             "kind": "normal",
             "features": [
               "clone-impls",
@@ -1409,7 +1409,7 @@
         "build_dependencies": [],
         "features": []
       },
-      "smallvec-1.15.2": {
+      "smallvec-1.16.2": {
         "runtime_dependencies": [],
         "build_dependencies": [],
         "features": []
@@ -1437,7 +1437,7 @@
         "build_dependencies": [],
         "features": []
       },
-      "syn-3.0.3": {
+      "syn-3.0.6": {
         "runtime_dependencies": [
           {
             "name": "proc_macro2",
@@ -1461,7 +1461,7 @@
           },
           {
             "name": "unicode_ident",
-            "package_key": "unicode-ident-1.0.24",
+            "package_key": "unicode-ident-1.0.26",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -1475,18 +1475,20 @@
           "clone-impls",
           "default",
           "derive",
+          "extra-traits",
           "full",
           "parsing",
           "printing",
           "proc-macro",
+          "visit",
           "visit-mut"
         ]
       },
-      "thiserror-2.0.19": {
+      "thiserror-2.0.21": {
         "runtime_dependencies": [
           {
             "name": "thiserror_impl",
-            "package_key": "thiserror-impl-2.0.19",
+            "package_key": "thiserror-impl-2.0.21",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -1501,7 +1503,7 @@
           "std"
         ]
       },
-      "thiserror-impl-2.0.19": {
+      "thiserror-impl-2.0.21": {
         "runtime_dependencies": [
           {
             "name": "proc_macro2",
@@ -1525,7 +1527,7 @@
           },
           {
             "name": "syn",
-            "package_key": "syn-3.0.3",
+            "package_key": "syn-3.0.6",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -1581,7 +1583,7 @@
           },
           {
             "name": "mio",
-            "package_key": "mio-1.2.2",
+            "package_key": "mio-1.2.3",
             "kind": "normal",
             "features": [],
             "uses_default_features": false,
@@ -1591,7 +1593,7 @@
           },
           {
             "name": "mio",
-            "package_key": "mio-1.2.2",
+            "package_key": "mio-1.2.3",
             "kind": "normal",
             "features": [
               "os-ext",
@@ -1704,7 +1706,7 @@
           },
           {
             "name": "syn",
-            "package_key": "syn-3.0.3",
+            "package_key": "syn-3.0.6",
             "kind": "normal",
             "features": [
               "full"
@@ -1796,7 +1798,7 @@
         "runtime_dependencies": [
           {
             "name": "indexmap",
-            "package_key": "indexmap-2.14.0",
+            "package_key": "indexmap-2.14.2",
             "kind": "normal",
             "features": [
               "std"
@@ -1876,7 +1878,7 @@
           "std"
         ]
       },
-      "unicode-ident-1.0.24": {
+      "unicode-ident-1.0.26": {
         "runtime_dependencies": [],
         "build_dependencies": [],
         "features": []
@@ -1920,7 +1922,7 @@
               },
               {
                 "name": "cfg_if",
-                "package_key": "cfg-if-1.0.4",
+                "package_key": "cfg-if-1.0.5",
                 "kind": "normal",
                 "features": [],
                 "uses_default_features": true,
@@ -1942,7 +1944,7 @@
             "build_dependencies": [
               {
                 "name": "cc",
-                "package_key": "cc-1.4.0",
+                "package_key": "cc-1.5.1",
                 "kind": "build",
                 "features": [],
                 "uses_default_features": true,
@@ -2000,7 +2002,7 @@
               },
               {
                 "name": "cfg_if",
-                "package_key": "cfg-if-1.0.4",
+                "package_key": "cfg-if-1.0.5",
                 "kind": "normal",
                 "features": [],
                 "uses_default_features": true,
@@ -2022,7 +2024,7 @@
             "build_dependencies": [
               {
                 "name": "cc",
-                "package_key": "cc-1.4.0",
+                "package_key": "cc-1.5.1",
                 "kind": "build",
                 "features": [],
                 "uses_default_features": true,
@@ -2061,7 +2063,7 @@
               },
               {
                 "name": "cfg_if",
-                "package_key": "cfg-if-1.0.4",
+                "package_key": "cfg-if-1.0.5",
                 "kind": "normal",
                 "features": [],
                 "uses_default_features": true,
@@ -2083,7 +2085,7 @@
             "build_dependencies": [
               {
                 "name": "cc",
-                "package_key": "cc-1.4.0",
+                "package_key": "cc-1.5.1",
                 "kind": "build",
                 "features": [],
                 "uses_default_features": true,
@@ -2122,7 +2124,7 @@
               },
               {
                 "name": "cfg_if",
-                "package_key": "cfg-if-1.0.4",
+                "package_key": "cfg-if-1.0.5",
                 "kind": "normal",
                 "features": [],
                 "uses_default_features": true,
@@ -2154,7 +2156,7 @@
             "build_dependencies": [
               {
                 "name": "cc",
-                "package_key": "cc-1.4.0",
+                "package_key": "cc-1.5.1",
                 "kind": "build",
                 "features": [],
                 "uses_default_features": true,
@@ -2217,7 +2219,7 @@
               },
               {
                 "name": "cfg_if",
-                "package_key": "cfg-if-1.0.4",
+                "package_key": "cfg-if-1.0.5",
                 "kind": "normal",
                 "features": [],
                 "uses_default_features": true,
@@ -2249,7 +2251,7 @@
             "build_dependencies": [
               {
                 "name": "cc",
-                "package_key": "cc-1.4.0",
+                "package_key": "cc-1.5.1",
                 "kind": "build",
                 "features": [],
                 "uses_default_features": true,
@@ -2293,7 +2295,7 @@
               },
               {
                 "name": "cfg_if",
-                "package_key": "cfg-if-1.0.4",
+                "package_key": "cfg-if-1.0.5",
                 "kind": "normal",
                 "features": [],
                 "uses_default_features": true,
@@ -2325,7 +2327,7 @@
             "build_dependencies": [
               {
                 "name": "cc",
-                "package_key": "cc-1.4.0",
+                "package_key": "cc-1.5.1",
                 "kind": "build",
                 "features": [],
                 "uses_default_features": true,
@@ -2359,7 +2361,7 @@
     "aho-corasick-1.1.5": {
       "edition": "2021"
     },
-    "akeyless-matrix-0.1.1": {
+    "akeyless-matrix-0.1.2": {
       "edition": "2024",
       "binaries": [
         {
@@ -2387,7 +2389,7 @@
     "arrayvec-0.7.8": {
       "edition": "2018"
     },
-    "async-trait-0.1.91": {
+    "async-trait-0.1.92": {
       "edition": "2021",
       "proc_macro": true
     },
@@ -2401,16 +2403,16 @@
     "bytes-1.12.1": {
       "edition": "2021"
     },
-    "cc-1.4.0": {
-      "edition": "2018"
+    "cc-1.5.1": {
+      "edition": "2021"
     },
-    "cfg-if-1.0.4": {
+    "cfg-if-1.0.5": {
       "edition": "2018"
     },
     "chrono-0.4.45": {
       "edition": "2021"
     },
-    "clap-4.6.6": {
+    "clap-4.6.7": {
       "edition": "2024",
       "binaries": [
         {
@@ -2419,14 +2421,14 @@
         }
       ]
     },
-    "clap_builder-4.6.6": {
+    "clap_builder-4.6.7": {
       "edition": "2024"
     },
-    "clap_derive-4.6.4": {
+    "clap_derive-4.6.7": {
       "edition": "2024",
       "proc_macro": true
     },
-    "clap_lex-1.1.0": {
+    "clap_lex-1.1.1": {
       "edition": "2024"
     },
     "colorchoice-1.0.5": {
@@ -2456,8 +2458,8 @@
     "errno-0.3.14": {
       "edition": "2018"
     },
-    "find-msvc-tools-0.1.9": {
-      "edition": "2018"
+    "find-msvc-tools-0.1.14": {
+      "edition": "2021"
     },
     "gen-nix-0.1.51": {
       "edition": "2024"
@@ -2474,7 +2476,7 @@
     "iana-time-zone-0.1.65": {
       "edition": "2021"
     },
-    "indexmap-2.14.0": {
+    "indexmap-2.14.2": {
       "edition": "2024"
     },
     "inventory-0.3.24": {
@@ -2499,7 +2501,7 @@
     "memchr-2.8.3": {
       "edition": "2021"
     },
-    "mio-1.2.2": {
+    "mio-1.2.3": {
       "edition": "2021"
     },
     "num-traits-0.2.19": {
@@ -2564,7 +2566,7 @@
     "signal-hook-registry-1.4.8": {
       "edition": "2015"
     },
-    "smallvec-1.15.2": {
+    "smallvec-1.16.2": {
       "edition": "2018"
     },
     "socket2-0.6.5": {
@@ -2573,14 +2575,14 @@
     "strsim-0.11.1": {
       "edition": "2015"
     },
-    "syn-3.0.3": {
+    "syn-3.0.6": {
       "edition": "2021"
     },
-    "thiserror-2.0.19": {
+    "thiserror-2.0.21": {
       "edition": "2021",
       "build_script": "build.rs"
     },
-    "thiserror-impl-2.0.19": {
+    "thiserror-impl-2.0.21": {
       "edition": "2021",
       "proc_macro": true
     },
@@ -2603,7 +2605,7 @@
     "toml_write-0.1.2": {
       "edition": "2021"
     },
-    "unicode-ident-1.0.24": {
+    "unicode-ident-1.0.26": {
       "edition": "2021"
     },
     "utf8parse-0.2.2": {
