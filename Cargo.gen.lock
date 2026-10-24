@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "cargo_lock_sha256": "26f10271851f84c498e9499c3004805705419e1d495d371fbb0b936d83573b18",
+  "cargo_lock_sha256": "eedbc872e9e1952245c18796ab0cfa7ae7f2fcb828344532094c123536dfe9b7",
   "manifest_sha256": {
     "Cargo.toml": "766215f5a2845cd0217cbea51ed062ff0dc36feaa99801d0cef46b596a70771a"
   },
@@ -699,7 +699,7 @@
         "runtime_dependencies": [
           {
             "name": "gen_types",
-            "package_key": "gen-types-0.1.51",
+            "package_key": "gen-types-0.1.52",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -733,7 +733,7 @@
         "build_dependencies": [],
         "features": []
       },
-      "gen-types-0.1.51": {
+      "gen-types-0.1.52": {
         "runtime_dependencies": [
           {
             "name": "blake3",
@@ -2464,7 +2464,7 @@
     "gen-nix-0.1.51": {
       "edition": "2024"
     },
-    "gen-types-0.1.51": {
+    "gen-types-0.1.52": {
       "edition": "2024"
     },
     "hashbrown-0.17.1": {

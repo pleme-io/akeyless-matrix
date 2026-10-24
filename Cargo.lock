@@ -337,9 +337,9 @@ dependencies = [
 
 [[package]]
 name = "gen-types"
-version = "0.1.51"
+version = "0.1.52"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "25c13fba2c9360c684e7f068deddba4ae436111441285d7b54e0facb3ebe3bc5"
+checksum = "a36de42423d45a3a53484df348c00d9691603252d6630dd3f980e01d560da7eb"
 dependencies = [
  "blake3",
  "chrono",
